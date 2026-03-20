@@ -1,0 +1,731 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Physics Visualiser - by Jiui</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Arial, sans-serif;
+            background: #0f172a;
+            color: #e2e8f0;
+            min-height: 100vh;
+        }
+
+        header {
+            text-align: center;
+            padding: 24px 16px 8px;
+            background: linear-gradient(135deg, #1e3a5f, #2e86ab);
+        }
+        header h1 { font-size: 28px; color: #fff; letter-spacing: 1px; }
+        .subtitle { color: #94a3b8; font-size: 14px; margin-top: 4px; }
+
+        .instructions {
+            text-align: center; padding: 8px;
+            background: #1e293b; color: #94a3b8; font-size: 13px;
+        }
+
+        .tabs {
+            display: flex; justify-content: center; gap: 4px;
+            padding: 12px 16px; background: #1e293b;
+        }
+        .tab-btn {
+            padding: 10px 24px; border: 2px solid #334155;
+            border-radius: 8px 8px 0 0; background: #1e293b;
+            color: #94a3b8; font-size: 14px; font-weight: 600;
+            cursor: pointer; transition: all 0.3s ease;
+        }
+        .tab-btn:hover { background: #334155; color: #e2e8f0; }
+        .tab-btn.active { background: #2e86ab; color: #fff; border-color: #2e86ab; }
+
+        .sim-panel { display: none; padding: 20px; max-width: 1000px; margin: 0 auto; }
+        .sim-panel.active { display: block; }
+        .sim-panel h2 { text-align: center; color: #2e86ab; margin-bottom: 16px; font-size: 22px; }
+
+        .sim-layout { display: flex; gap: 20px; justify-content: center; flex-wrap: wrap; }
+
+        canvas { background: #1a1a2e; border: 2px solid #334155; border-radius: 8px; }
+
+        .controls {
+            background: #1e293b; padding: 16px; border-radius: 8px;
+            border: 1px solid #334155; min-width: 240px;
+        }
+        .slider-group { margin-bottom: 14px; }
+        .slider-group label { display: block; font-size: 13px; color: #94a3b8; margin-bottom: 4px; }
+        .slider-group input[type="range"] { width: 100%; accent-color: #2e86ab; }
+        .slider-value { text-align: right; font-size: 14px; color: #f18f01; font-weight: 700; }
+
+        .readout {
+            background: #0f172a; padding: 8px 12px; border-radius: 6px;
+            margin-top: 12px; font-size: 13px; line-height: 1.8; border: 1px solid #334155;
+        }
+        .readout span { color: #f18f01; font-weight: 700; }
+
+        .sim-btn {
+            width: 100%; padding: 10px; margin-top: 10px; border: none;
+            border-radius: 6px; font-size: 14px; font-weight: 700;
+            cursor: pointer; background: #2e86ab; color: white; transition: background 0.2s;
+        }
+        .sim-btn:hover { background: #f18f01; }
+        .sim-btn.paused { background: #f18f01; }
+        .sim-btn.secondary { background: #64748b; }
+
+        footer {
+            text-align: center; padding: 20px; background: #0f172a;
+            color: #475569; font-size: 12px; margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <h1>Interactive Physics Visualiser</h1>
+        <p class="subtitle">Built by Jiui</p>
+    </header>
+
+    <div class="instructions">
+        Use the tabs to switch between simulations. Adjust sliders to change parameters and observe how the physics responds!
+    </div>
+
+    <nav class="tabs">
+        <button class="tab-btn active" onclick="switchTab('circular', this)">Circular Motion</button>
+        <button class="tab-btn" onclick="switchTab('projectile', this)">Projectile Motion</button>
+        <button class="tab-btn" onclick="switchTab('energy', this)">Energy Conversion</button>
+    </nav>
+
+    <!-- ===================== CIRCULAR MOTION ===================== -->
+    <div id="circular" class="sim-panel active">
+        <h2>Circular Motion &amp; Centripetal Force</h2>
+        <div class="sim-layout">
+            <canvas id="circularCanvas" width="500" height="500"></canvas>
+            <div class="controls">
+                <div class="slider-group">
+                    <label>Mass (kg)</label>
+                    <input type="range" id="cMass" min="0.5" max="10" step="0.5" value="2" oninput="updateCircular()">
+                    <div class="slider-value" id="cMassVal">2.0 kg</div>
+                </div>
+                <div class="slider-group">
+                    <label>Speed (m/s)</label>
+                    <input type="range" id="cSpeed" min="1" max="20" step="0.5" value="5" oninput="updateCircular()">
+                    <div class="slider-value" id="cSpeedVal">5.0 m/s</div>
+                </div>
+                <div class="slider-group">
+                    <label>Radius (m)</label>
+                    <input type="range" id="cRadius" min="0.5" max="5" step="0.25" value="2" oninput="updateCircular()">
+                    <div class="slider-value" id="cRadiusVal">2.0 m</div>
+                </div>
+                <div class="readout">
+                    Centripetal Force:<br><span id="cForceVal">25.0 N</span><br>
+                    Centripetal Accel:<br><span id="cAccelVal">12.5 m/s&sup2;</span>
+                </div>
+                <button class="sim-btn" id="cPauseBtn" onclick="toggleCircular()">⏸ Pause</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ===================== PROJECTILE MOTION ===================== -->
+    <div id="projectile" class="sim-panel">
+        <h2>Projectile Motion</h2>
+        <div class="sim-layout">
+            <canvas id="projectileCanvas" width="600" height="400"></canvas>
+            <div class="controls">
+                <div class="slider-group">
+                    <label>Initial Speed (m/s)</label>
+                    <input type="range" id="pSpeed" min="5" max="50" step="1" value="25" oninput="updateProjectile()">
+                    <div class="slider-value" id="pSpeedVal">25 m/s</div>
+                </div>
+                <div class="slider-group">
+                    <label>Launch Angle (degrees)</label>
+                    <input type="range" id="pAngle" min="5" max="85" step="1" value="45" oninput="updateProjectile()">
+                    <div class="slider-value" id="pAngleVal">45°</div>
+                </div>
+                <button class="sim-btn" onclick="launchProjectile()">🚀 Launch!</button>
+                <button class="sim-btn" id="pPauseBtn" onclick="toggleProjectile()">⏸ Pause</button>
+                <button class="sim-btn secondary" onclick="resetProjectile()">↺ Reset</button>
+                <div class="readout">
+                    Max Height: <span id="pHeightVal">--</span><br>
+                    Range: <span id="pRangeVal">--</span><br>
+                    Flight Time: <span id="pTimeVal">--</span><br>
+                    Zoom: <span id="pZoomVal">100%</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ===================== ENERGY CONVERSION ===================== -->
+    <div id="energy" class="sim-panel">
+        <h2>Energy Conversion</h2>
+        <div class="sim-layout">
+            <canvas id="energyCanvas" width="600" height="400"></canvas>
+            <div class="controls">
+                <div class="slider-group">
+                    <label>Mass (kg)</label>
+                    <input type="range" id="eMass" min="0.5" max="10" step="0.5" value="2" oninput="updateEnergy()">
+                    <div class="slider-value" id="eMassVal">2.0 kg</div>
+                </div>
+                <div class="slider-group">
+                    <label>Drop Height (m)</label>
+                    <input type="range" id="eHeight" min="5" max="50" step="1" value="30" oninput="updateEnergy()">
+                    <div class="slider-value" id="eHeightVal">30 m</div>
+                </div>
+                <button class="sim-btn" onclick="dropBall()">⬇ Drop!</button>
+                <button class="sim-btn" id="ePauseBtn" onclick="toggleEnergy()">⏸ Pause</button>
+                <button class="sim-btn secondary" onclick="resetEnergy()">↺ Reset</button>
+                <div class="readout">
+                    PE: <span id="ePEVal">--</span> J<br>
+                    KE: <span id="eKEVal">--</span> J<br>
+                    Total: <span id="eTotalVal">--</span> J<br>
+                    Speed: <span id="eVelVal">--</span> m/s
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <footer>Physics Visualiser | Built by Jiui | HTML5 Canvas + JavaScript</footer>
+
+    <script>
+    // ============================================
+    // TAB SWITCHING
+    // ============================================
+    function switchTab(tabName, clickedBtn) {
+        document.querySelectorAll('.sim-panel').forEach(function(p) { p.classList.remove('active'); });
+        document.querySelectorAll('.tab-btn').forEach(function(b) { b.classList.remove('active'); });
+        document.getElementById(tabName).classList.add('active');
+        clickedBtn.classList.add('active');
+    }
+
+    // ============================================
+    // HELPER: Arrow drawing
+    // ============================================
+    function drawArrow(ctx, x1, y1, x2, y2, color, width) {
+        var hl = 10, ang = Math.atan2(y2-y1, x2-x1);
+        ctx.beginPath(); ctx.moveTo(x1,y1); ctx.lineTo(x2,y2);
+        ctx.strokeStyle = color; ctx.lineWidth = width; ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(x2, y2);
+        ctx.lineTo(x2 - hl*Math.cos(ang-0.4), y2 - hl*Math.sin(ang-0.4));
+        ctx.lineTo(x2 - hl*Math.cos(ang+0.4), y2 - hl*Math.sin(ang+0.4));
+        ctx.closePath(); ctx.fillStyle = color; ctx.fill();
+    }
+
+    // ============================================
+    // HELPER: Pause button toggle
+    // ============================================
+    function updatePauseBtn(id, isPaused) {
+        var b = document.getElementById(id);
+        if (isPaused) { b.textContent = '▶ Resume'; b.classList.add('paused'); }
+        else          { b.textContent = '⏸ Pause';  b.classList.remove('paused'); }
+    }
+
+    // ============================================
+    // 1. CIRCULAR MOTION
+    // ============================================
+    var cCanvas = document.getElementById('circularCanvas');
+    var cCtx    = cCanvas.getContext('2d');
+    var cAngle  = 0, cRunning = true;
+
+    function getCircularParams() {
+        return {
+            m: parseFloat(document.getElementById('cMass').value),
+            v: parseFloat(document.getElementById('cSpeed').value),
+            r: parseFloat(document.getElementById('cRadius').value)
+        };
+    }
+
+    function toggleCircular() { cRunning = !cRunning; updatePauseBtn('cPauseBtn', !cRunning); }
+
+    function updateCircular() {
+        var m = document.getElementById('cMass').value;
+        var v = document.getElementById('cSpeed').value;
+        var r = document.getElementById('cRadius').value;
+        document.getElementById('cMassVal').textContent  = parseFloat(m).toFixed(1) + ' kg';
+        document.getElementById('cSpeedVal').textContent = parseFloat(v).toFixed(1) + ' m/s';
+        document.getElementById('cRadiusVal').textContent= parseFloat(r).toFixed(1) + ' m';
+        document.getElementById('cForceVal').textContent = (m*v*v/r).toFixed(1) + ' N';
+        document.getElementById('cAccelVal').textContent = (v*v/r).toFixed(1) + ' m/s\u00B2';
+    }
+
+    function drawCircular() {
+        var p = getCircularParams(), m=p.m, v=p.v, r=p.r;
+        var W=cCanvas.width, H=cCanvas.height, cx=W/2, cy=H/2, sc=40, rPx=r*sc;
+        cCtx.clearRect(0,0,W,H);
+
+        // Orbit path
+        cCtx.beginPath(); cCtx.arc(cx,cy,rPx,0,2*Math.PI);
+        cCtx.setLineDash([5,5]); cCtx.strokeStyle='#334155'; cCtx.lineWidth=1; cCtx.stroke();
+        cCtx.setLineDash([]);
+
+        // Centre
+        cCtx.beginPath(); cCtx.arc(cx,cy,4,0,2*Math.PI); cCtx.fillStyle='#64748b'; cCtx.fill();
+
+        // Ball
+        var bx = cx + rPx*Math.cos(cAngle), by = cy - rPx*Math.sin(cAngle);
+        cCtx.beginPath(); cCtx.moveTo(cx,cy); cCtx.lineTo(bx,by);
+        cCtx.strokeStyle='#475569'; cCtx.lineWidth=1; cCtx.stroke();
+        cCtx.beginPath(); cCtx.arc(bx,by,12,0,2*Math.PI);
+        cCtx.fillStyle='#f18f01'; cCtx.fill();
+        cCtx.strokeStyle='#fbbf24'; cCtx.lineWidth=2; cCtx.stroke();
+
+        // Velocity vector
+        var vs=3, vdx=-Math.sin(cAngle), vdy=-Math.cos(cAngle);
+        drawArrow(cCtx, bx, by, bx+vdx*v*vs, by+vdy*v*vs, '#22c55e', 2);
+        cCtx.font='13px Segoe UI,Arial,sans-serif'; cCtx.fillStyle='#22c55e';
+        cCtx.fillText('v', bx+vdx*v*vs+5, by+vdy*v*vs);
+
+        // Force vector
+        var Fc=m*v*v/r, fs=0.5, fdx=cx-bx, fdy=cy-by;
+        var fl=Math.sqrt(fdx*fdx+fdy*fdy);
+        if(fl>0){
+            drawArrow(cCtx, bx, by, bx+(fdx/fl)*Fc*fs, by+(fdy/fl)*Fc*fs, '#ef4444', 2.5);
+            cCtx.fillStyle='#ef4444'; cCtx.fillText('Fc', bx+(fdx/fl)*Fc*fs+5, by+(fdy/fl)*Fc*fs-5);
+        }
+
+        // Labels
+        cCtx.font='14px Segoe UI,Arial,sans-serif'; cCtx.textAlign='left';
+        cCtx.fillStyle='#e2e8f0'; cCtx.fillText('Fc = mv\u00B2/r', 12, 25);
+        cCtx.fillStyle='#22c55e'; cCtx.fillText('\u25B6 green = velocity', 12, 45);
+        cCtx.fillStyle='#ef4444'; cCtx.fillText('\u25B6 red = centripetal force', 12, 65);
+
+        if(!cRunning){
+            cCtx.font='bold 18px Segoe UI,Arial,sans-serif'; cCtx.fillStyle='rgba(241,143,1,0.8)';
+            cCtx.textAlign='center'; cCtx.fillText('\u23F8 PAUSED', W/2, H-20); cCtx.textAlign='left';
+        }
+    }
+
+    function animateCircular() {
+        if(cRunning){ var p=getCircularParams(); cAngle += (p.v/p.r)*0.016; }
+        drawCircular();
+        requestAnimationFrame(animateCircular);
+    }
+    animateCircular();
+
+    // ============================================
+    // 2. PROJECTILE MOTION (with auto-zoom)
+    // ============================================
+    var pCanvas = document.getElementById('projectileCanvas');
+    var pCtx    = pCanvas.getContext('2d');
+    var G       = 9.8;
+    var pBall   = null;
+    var pFlying = false, pPaused = false;
+
+    // Trail stored as PHYSICS coordinates (metres) so we can rescale dynamically
+    var pTrail  = [];   // [{px, py}, ...]
+    var pMaxX = 0, pMaxY = 0;
+
+    // Scale: pixels per metre
+    var pBaseScale = 5;   // default (no zoom-out needed)
+    var pDynScale  = 5;   // computed dynamically
+
+    // Canvas padding
+    var pPadL = 40, pPadR = 20, pPadT = 30, pPadB = 40;
+
+    function toggleProjectile() { pPaused = !pPaused; updatePauseBtn('pPauseBtn', pPaused); }
+
+    function updateProjectile() {
+        document.getElementById('pSpeedVal').textContent = document.getElementById('pSpeed').value + ' m/s';
+        document.getElementById('pAngleVal').textContent = document.getElementById('pAngle').value + '\u00B0';
+    }
+
+    // Compute the scale factor so the full trajectory fits inside the canvas
+    function computeScale() {
+        var drawW = pCanvas.width  - pPadL - pPadR;
+        var drawH = pCanvas.height - pPadT - pPadB;
+        var sx = (pMaxX > 0) ? drawW / pMaxX : pBaseScale;
+        var sy = (pMaxY > 0) ? drawH / pMaxY : pBaseScale;
+        // Use the smaller so BOTH axes fit; never zoom in past base
+        pDynScale = Math.min(sx, sy, pBaseScale);
+        document.getElementById('pZoomVal').textContent = Math.round(pDynScale / pBaseScale * 100) + '%';
+    }
+
+    // Physics -> screen coordinate conversion
+    function toScreen(px, py) {
+        var groundY = pCanvas.height - pPadB;
+        return { x: pPadL + px * pDynScale, y: groundY - py * pDynScale };
+    }
+
+    function launchProjectile() {
+        var v0  = parseFloat(document.getElementById('pSpeed').value);
+        var deg = parseFloat(document.getElementById('pAngle').value);
+        var rad = deg * Math.PI / 180;
+
+        pBall = { x:0, y:0, vx: v0*Math.cos(rad), vy: v0*Math.sin(rad), t:0 };
+        pTrail = [{ px:0, py:0 }];
+        pFlying = true; pPaused = false;
+        updatePauseBtn('pPauseBtn', false);
+
+        // Pre-calculate the theoretical extent so the scale is right from frame 1
+        var H = v0*v0*Math.pow(Math.sin(rad),2) / (2*G);
+        var R = v0*v0*Math.sin(2*rad) / G;
+        var T = 2*v0*Math.sin(rad) / G;
+        pMaxX = R * 1.05;   // 5% margin
+        pMaxY = H * 1.1;    // 10% margin (top is more visible)
+        computeScale();
+
+        document.getElementById('pHeightVal').textContent = H.toFixed(1) + ' m';
+        document.getElementById('pRangeVal').textContent  = R.toFixed(1) + ' m';
+        document.getElementById('pTimeVal').textContent   = T.toFixed(2) + ' s';
+    }
+
+    function resetProjectile() {
+        pBall = null; pTrail = []; pFlying = false; pPaused = false;
+        pMaxX = 0; pMaxY = 0; pDynScale = pBaseScale;
+        updatePauseBtn('pPauseBtn', false);
+        document.getElementById('pHeightVal').textContent = '--';
+        document.getElementById('pRangeVal').textContent  = '--';
+        document.getElementById('pTimeVal').textContent   = '--';
+        document.getElementById('pZoomVal').textContent   = '100%';
+    }
+
+    function drawProjectile() {
+        var W = pCanvas.width, H = pCanvas.height;
+        var groundY = H - pPadB;
+        pCtx.clearRect(0, 0, W, H);
+
+        // Ground
+        pCtx.fillStyle = '#334155';
+        pCtx.fillRect(0, groundY, W, H - groundY);
+
+        // ---- Grid lines ----
+        var gridStep = 10;
+        if (pDynScale < 1.5) gridStep = 50;
+        else if (pDynScale < 3) gridStep = 20;
+
+        pCtx.strokeStyle = 'rgba(51,65,85,0.35)';
+        pCtx.lineWidth = 0.5;
+        pCtx.font = '9px Segoe UI,Arial,sans-serif';
+        pCtx.fillStyle = '#475569';
+        pCtx.textAlign = 'center';
+
+        // Vertical grid + labels
+        for (var gx = gridStep; pPadL + gx*pDynScale < W - pPadR; gx += gridStep) {
+            var sx = pPadL + gx * pDynScale;
+            pCtx.beginPath(); pCtx.moveTo(sx, pPadT); pCtx.lineTo(sx, groundY); pCtx.stroke();
+            pCtx.fillText(gx + 'm', sx, groundY + 14);
+        }
+        // Horizontal grid + labels
+        pCtx.textAlign = 'right';
+        for (var gy = gridStep; groundY - gy*pDynScale > pPadT; gy += gridStep) {
+            var sy = groundY - gy * pDynScale;
+            pCtx.beginPath(); pCtx.moveTo(pPadL, sy); pCtx.lineTo(W, sy); pCtx.stroke();
+            pCtx.fillText(gy + 'm', pPadL - 4, sy + 3);
+        }
+
+        // Axes
+        pCtx.strokeStyle = '#475569'; pCtx.lineWidth = 1;
+        pCtx.beginPath(); pCtx.moveTo(pPadL, pPadT); pCtx.lineTo(pPadL, groundY); pCtx.lineTo(W, groundY); pCtx.stroke();
+
+        // ---- Scale ruler ----
+        var rulerM = gridStep, rulerPx = rulerM * pDynScale;
+        if (rulerPx > 15 && rulerPx < W - 80) {
+            var ry = groundY + 26;
+            pCtx.strokeStyle = '#64748b'; pCtx.lineWidth = 1;
+            pCtx.beginPath();
+            pCtx.moveTo(pPadL, ry); pCtx.lineTo(pPadL + rulerPx, ry);
+            pCtx.moveTo(pPadL, ry-3); pCtx.lineTo(pPadL, ry+3);
+            pCtx.moveTo(pPadL+rulerPx, ry-3); pCtx.lineTo(pPadL+rulerPx, ry+3);
+            pCtx.stroke();
+            pCtx.font = '10px Segoe UI,Arial,sans-serif'; pCtx.fillStyle = '#64748b';
+            pCtx.textAlign = 'center';
+            pCtx.fillText(rulerM + ' m', pPadL + rulerPx/2, ry + 13);
+        }
+
+        // ---- Trail ----
+        if (pTrail.length > 1) {
+            pCtx.beginPath();
+            var f = toScreen(pTrail[0].px, pTrail[0].py);
+            pCtx.moveTo(f.x, f.y);
+            for (var i = 1; i < pTrail.length; i++) {
+                var pt = toScreen(pTrail[i].px, pTrail[i].py);
+                pCtx.lineTo(pt.x, pt.y);
+            }
+            pCtx.strokeStyle = '#2e86ab'; pCtx.lineWidth = 2.5; pCtx.stroke();
+
+            // Dots every ~15 points
+            pCtx.fillStyle = 'rgba(46,134,171,0.45)';
+            for (var j = 0; j < pTrail.length; j += 15) {
+                var d = toScreen(pTrail[j].px, pTrail[j].py);
+                pCtx.beginPath(); pCtx.arc(d.x, d.y, 3, 0, 2*Math.PI); pCtx.fill();
+            }
+        }
+
+        // ---- Ball ----
+        if (pBall) {
+            var s = toScreen(pBall.x, Math.max(0, pBall.y));
+
+            // Ball circle
+            pCtx.beginPath(); pCtx.arc(s.x, s.y, 8, 0, 2*Math.PI);
+            pCtx.fillStyle = '#f18f01'; pCtx.fill();
+            pCtx.strokeStyle = '#fbbf24'; pCtx.lineWidth = 2; pCtx.stroke();
+
+            // Gravity arrow
+            drawArrow(pCtx, s.x, s.y, s.x, s.y + 30, '#ef4444', 2);
+
+            // Velocity arrow
+            var va = 1.5;
+            drawArrow(pCtx, s.x, s.y, s.x + pBall.vx*va, s.y - pBall.vy*va, '#22c55e', 1.5);
+
+            // Live labels near ball
+            pCtx.font = '11px Segoe UI,Arial,sans-serif'; pCtx.textAlign = 'left';
+            pCtx.fillStyle = '#94a3b8';
+            pCtx.fillText('h=' + Math.max(0,pBall.y).toFixed(1) + 'm', s.x+14, s.y-8);
+            pCtx.fillText('x=' + pBall.x.toFixed(1) + 'm', s.x+14, s.y+6);
+        }
+
+        // ---- Angle guide (before any launch) ----
+        if (!pFlying && !pBall) {
+            var a = parseFloat(document.getElementById('pAngle').value) * Math.PI / 180;
+            var gl = 60;
+            pCtx.setLineDash([4,4]);
+            pCtx.beginPath(); pCtx.moveTo(pPadL, groundY);
+            pCtx.lineTo(pPadL + gl*Math.cos(a), groundY - gl*Math.sin(a));
+            pCtx.strokeStyle = '#fbbf24'; pCtx.lineWidth = 2; pCtx.stroke();
+            pCtx.setLineDash([]);
+            // Arc
+            pCtx.beginPath(); pCtx.arc(pPadL, groundY, 25, -a, 0);
+            pCtx.strokeStyle='#fbbf24'; pCtx.lineWidth=1; pCtx.stroke();
+            pCtx.font='12px Segoe UI,Arial,sans-serif'; pCtx.fillStyle='#fbbf24'; pCtx.textAlign='left';
+            pCtx.fillText(document.getElementById('pAngle').value + '\u00B0', pPadL+30, groundY-8);
+        }
+
+        // ---- Legend ----
+        pCtx.font = '12px Segoe UI,Arial,sans-serif'; pCtx.textAlign = 'left';
+        pCtx.fillStyle = '#22c55e'; pCtx.fillText('\u25B6 velocity', W-120, pPadT+14);
+        pCtx.fillStyle = '#ef4444'; pCtx.fillText('\u25B6 gravity',  W-120, pPadT+30);
+
+        // ---- Paused overlay ----
+        if (pPaused && pBall && pFlying) {
+            pCtx.font = 'bold 18px Segoe UI,Arial,sans-serif'; pCtx.fillStyle = 'rgba(241,143,1,0.8)';
+            pCtx.textAlign = 'center'; pCtx.fillText('\u23F8 PAUSED', W/2, pPadT+20); pCtx.textAlign = 'left';
+        }
+    }
+
+    function animateProjectile() {
+        if (pFlying && pBall && !pPaused) {
+            var dt = 0.03;
+            pBall.vy -= G * dt;
+            pBall.x  += pBall.vx * dt;
+            pBall.y  += pBall.vy * dt;
+            pBall.t  += dt;
+
+            pTrail.push({ px: pBall.x, py: Math.max(0, pBall.y) });
+
+            // Expand bounding box if needed -> recompute scale
+            var changed = false;
+            if (pBall.x > pMaxX) { pMaxX = pBall.x * 1.05; changed = true; }
+            if (pBall.y > pMaxY) { pMaxY = pBall.y * 1.1;  changed = true; }
+            if (changed) computeScale();
+
+            // Ground hit
+            if (pBall.y <= 0 && pBall.t > 0.1) {
+                pBall.y = 0; pFlying = false;
+                pTrail.push({ px: pBall.x, py: 0 });
+            }
+        }
+        drawProjectile();
+        requestAnimationFrame(animateProjectile);
+    }
+    animateProjectile();
+
+    // ============================================
+    // 3. ENERGY CONVERSION
+    // ============================================
+    var eCanvas   = document.getElementById('energyCanvas');
+    var eCtx      = eCanvas.getContext('2d');
+    var eBall     = null;
+    var eDropping = false, ePaused = false;
+
+    function getEnergyParams() {
+        return {
+            m:  parseFloat(document.getElementById('eMass').value),
+            h0: parseFloat(document.getElementById('eHeight').value)
+        };
+    }
+
+    function toggleEnergy() { ePaused = !ePaused; updatePauseBtn('ePauseBtn', ePaused); }
+
+    function dropBall() {
+        var p = getEnergyParams();
+        eBall = { h: p.h0, v: 0, h0: p.h0 };
+        eDropping = true; ePaused = false;
+        updatePauseBtn('ePauseBtn', false);
+    }
+
+    function resetEnergy() {
+        eBall = null; eDropping = false; ePaused = false;
+        updatePauseBtn('ePauseBtn', false);
+        document.getElementById('ePEVal').textContent    = '--';
+        document.getElementById('eKEVal').textContent    = '--';
+        document.getElementById('eTotalVal').textContent  = '--';
+        document.getElementById('eVelVal').textContent   = '--';
+    }
+
+    function updateEnergy() {
+        document.getElementById('eMassVal').textContent   = parseFloat(document.getElementById('eMass').value).toFixed(1) + ' kg';
+        document.getElementById('eHeightVal').textContent  = document.getElementById('eHeight').value + ' m';
+    }
+
+    function drawEnergy() {
+        var W = eCanvas.width, H = eCanvas.height;
+        var p = getEnergyParams(), m = p.m, h0 = p.h0;
+        eCtx.clearRect(0, 0, W, H);
+
+        var groundY = H - 30, topY = 30;
+        var dropX = 100;     // ball column centre
+        var barX  = 260;     // bar chart left edge
+        var barW  = 55;
+
+        // The usable vertical height for both ball AND bars (same scale!)
+        var barMaxH = groundY - topY - 20;
+        var barTopY = groundY - barMaxH;   // screen Y of maximum height
+
+        // Ground
+        eCtx.fillStyle = '#334155'; eCtx.fillRect(0, groundY, W, H - groundY);
+
+        // Current state
+        var curH = h0, curV = 0;
+        if (eBall) { curH = eBall.h; curV = eBall.v; }
+
+        // Height fraction (0 at ground, 1 at h0)
+        var hFrac = (h0 > 0) ? curH / h0 : 0;
+
+        // Ball screen Y: uses the SAME vertical range as the bar chart
+        // At h=h0: ballY = barTopY (top of bar). At h=0: ballY = groundY.
+        var ballY = groundY - hFrac * barMaxH;
+
+        // ---- Height scale on the left ----
+        var scaleX = 25;
+        eCtx.strokeStyle = '#475569'; eCtx.lineWidth = 1;
+        eCtx.beginPath(); eCtx.moveTo(scaleX, barTopY); eCtx.lineTo(scaleX, groundY); eCtx.stroke();
+
+        // Height tick marks
+        eCtx.font = '10px Segoe UI,Arial,sans-serif'; eCtx.fillStyle = '#64748b'; eCtx.textAlign = 'right';
+        var numTicks = 5;
+        for (var t = 0; t <= numTicks; t++) {
+            var frac = t / numTicks;
+            var tickY = groundY - frac * barMaxH;
+            var tickH = (frac * h0).toFixed(0);
+            eCtx.beginPath(); eCtx.moveTo(scaleX - 4, tickY); eCtx.lineTo(scaleX, tickY); eCtx.stroke();
+            eCtx.fillText(tickH + 'm', scaleX - 6, tickY + 3);
+        }
+
+        // ---- Dashed "initial height" line across the full width ----
+        eCtx.setLineDash([4, 6]); eCtx.strokeStyle = 'rgba(251,191,36,0.3)'; eCtx.lineWidth = 1;
+        eCtx.beginPath(); eCtx.moveTo(scaleX, barTopY); eCtx.lineTo(barX + barW + 10, barTopY); eCtx.stroke();
+        eCtx.setLineDash([]);
+
+        // ---- Drop column guide (thin line where ball falls) ----
+        eCtx.strokeStyle = 'rgba(71,85,105,0.4)'; eCtx.lineWidth = 1;
+        eCtx.setLineDash([2, 4]);
+        eCtx.beginPath(); eCtx.moveTo(dropX, barTopY); eCtx.lineTo(dropX, groundY); eCtx.stroke();
+        eCtx.setLineDash([]);
+
+        // ---- Ball ----
+        eCtx.beginPath(); eCtx.arc(dropX, ballY, 14, 0, 2 * Math.PI);
+        eCtx.fillStyle = '#f18f01'; eCtx.fill();
+        eCtx.strokeStyle = '#fbbf24'; eCtx.lineWidth = 2; eCtx.stroke();
+
+        // Ball shadow on ground
+        eCtx.beginPath();
+        eCtx.ellipse(dropX, groundY, 10, 3, 0, 0, 2 * Math.PI);
+        eCtx.fillStyle = 'rgba(0,0,0,0.25)'; eCtx.fill();
+
+        // Ball labels
+        eCtx.font = '12px Segoe UI,Arial,sans-serif'; eCtx.fillStyle = '#94a3b8'; eCtx.textAlign = 'left';
+        eCtx.fillText(curH.toFixed(1) + ' m', dropX + 20, ballY - 8);
+        if (eBall) eCtx.fillText('v = ' + curV.toFixed(1) + ' m/s', dropX + 20, ballY + 16);
+
+        // ---- Dashed line connecting ball to bar (same height) ----
+        eCtx.setLineDash([3, 5]); eCtx.strokeStyle = 'rgba(148,163,184,0.35)'; eCtx.lineWidth = 1;
+        eCtx.beginPath(); eCtx.moveTo(dropX + 16, ballY); eCtx.lineTo(barX - 5, ballY); eCtx.stroke();
+        eCtx.setLineDash([]);
+
+        // ---- Energy calculations ----
+        var PE = m * G * curH, KE = 0.5 * m * curV * curV, total = m * G * h0;
+        document.getElementById('ePEVal').textContent   = PE.toFixed(1);
+        document.getElementById('eKEVal').textContent   = KE.toFixed(1);
+        document.getElementById('eTotalVal').textContent = total.toFixed(1);
+        document.getElementById('eVelVal').textContent  = curV.toFixed(1);
+
+        // ---- Stacked bar chart ----
+        var peBarH = (total > 0) ? (PE / total) * barMaxH : 0;
+        var keBarH = (total > 0) ? (KE / total) * barMaxH : 0;
+
+        // Bar outline (full height = total energy)
+        eCtx.strokeStyle = 'rgba(71,85,105,0.5)'; eCtx.lineWidth = 1;
+        eCtx.strokeRect(barX, barTopY, barW, barMaxH);
+
+        // PE bar (purple, from ground up)
+        var peY = groundY - peBarH;
+        eCtx.fillStyle = '#7c3aed'; eCtx.fillRect(barX, peY, barW, peBarH);
+
+        // KE bar (red, stacked on top of PE)
+        var keY = peY - keBarH;
+        eCtx.fillStyle = '#ef4444'; eCtx.fillRect(barX, keY, barW, keBarH);
+
+        // Bar text labels
+        eCtx.font = 'bold 13px Segoe UI,Arial,sans-serif'; eCtx.textAlign = 'center';
+        if (peBarH > 22) { eCtx.fillStyle = '#fff'; eCtx.fillText('PE', barX + barW/2, peY + peBarH/2 + 5); }
+        if (keBarH > 22) { eCtx.fillStyle = '#fff'; eCtx.fillText('KE', barX + barW/2, keY + keBarH/2 + 5); }
+
+        // ---- Total energy line (golden dashed) spanning bar + ball ----
+        eCtx.setLineDash([6, 4]); eCtx.strokeStyle = '#fbbf24'; eCtx.lineWidth = 2;
+        eCtx.beginPath(); eCtx.moveTo(scaleX, barTopY); eCtx.lineTo(barX + barW + 15, barTopY); eCtx.stroke();
+        eCtx.setLineDash([]);
+
+        eCtx.font = '12px Segoe UI,Arial,sans-serif'; eCtx.fillStyle = '#fbbf24'; eCtx.textAlign = 'left';
+        eCtx.fillText('E total', barX + barW + 18, barTopY + 4);
+
+        // ---- "Ground" line spanning bar + ball ----
+        eCtx.strokeStyle = 'rgba(71,85,105,0.6)'; eCtx.lineWidth = 1;
+        eCtx.beginPath(); eCtx.moveTo(scaleX, groundY); eCtx.lineTo(barX + barW + 15, groundY); eCtx.stroke();
+
+        // ---- Numeric values to the right of bars ----
+        var vx = barX + barW + 20;
+        eCtx.font = '13px Segoe UI,Arial,sans-serif'; eCtx.textAlign = 'left';
+        eCtx.fillStyle = '#7c3aed'; eCtx.fillText('PE = ' + PE.toFixed(1) + ' J',     vx, barTopY + 35);
+        eCtx.fillStyle = '#ef4444'; eCtx.fillText('KE = ' + KE.toFixed(1) + ' J',     vx, barTopY + 55);
+        eCtx.fillStyle = '#fbbf24'; eCtx.fillText('Total = ' + total.toFixed(1) + ' J', vx, barTopY + 75);
+
+        // ---- Percentage labels ----
+        if (total > 0) {
+            var pePct = Math.round(PE / total * 100);
+            var kePct = 100 - pePct;
+            eCtx.font = '11px Segoe UI,Arial,sans-serif';
+            eCtx.fillStyle = '#c4b5fd';
+            eCtx.fillText('(' + pePct + '%)', vx + 120, barTopY + 35);
+            eCtx.fillStyle = '#fca5a5';
+            eCtx.fillText('(' + kePct + '%)', vx + 120, barTopY + 55);
+        }
+
+        // ---- Title labels ----
+        eCtx.font = 'bold 12px Segoe UI,Arial,sans-serif'; eCtx.textAlign = 'center';
+        eCtx.fillStyle = '#64748b';
+        eCtx.fillText('Ball', dropX, groundY + 18);
+        eCtx.fillText('Energy', barX + barW/2, groundY + 18);
+
+        // ---- Paused ----
+        if (ePaused && eBall && eDropping) {
+            eCtx.font = 'bold 18px Segoe UI,Arial,sans-serif'; eCtx.fillStyle = 'rgba(241,143,1,0.8)';
+            eCtx.textAlign = 'center'; eCtx.fillText('\u23F8 PAUSED', W/2, topY + 16); eCtx.textAlign = 'left';
+        }
+    }
+
+    function animateEnergy() {
+        if (eDropping && eBall && !ePaused) {
+            var dt = 0.03;
+            eBall.v += G * dt;
+            eBall.h -= eBall.v * dt;
+            if (eBall.h <= 0) {
+                eBall.h = 0;
+                eBall.v = Math.sqrt(2 * G * eBall.h0);
+                eDropping = false;
+            }
+        }
+        drawEnergy();
+        requestAnimationFrame(animateEnergy);
+    }
+    animateEnergy();
+    </script>
+</body>
+</html>
