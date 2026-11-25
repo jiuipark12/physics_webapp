@@ -1,0 +1,1747 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Antiphase Noise Lab</title>
+  <meta name="description" content="An interactive picture of how noise-cancelling headphones work. Explore the music, the noise and the anti-noise.">
+  <meta name="color-scheme" content="dark">
+  <meta name="theme-color" content="#06080d">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 24'%3E%3Cpath d='M2 12C6 0 10 0 14 12S22 24 26 12 34 0 38 12' fill='none' stroke='%23ff8a5c' stroke-width='3' stroke-linecap='round'/%3E%3Cpath d='M2 12C6 24 10 24 14 12S22 0 26 12 34 24 38 12' fill='none' stroke='%23b794ff' stroke-width='3' stroke-linecap='round'/%3E%3C/svg%3E">
+  <style>
+/* Antiphase · styles */
+
+:root {
+  color-scheme: dark;
+  --bg: #06080d;
+  --bg-2: #0a0f17;
+  --panel: #0e1520;
+  --panel-2: #131d2b;
+  --line: rgba(255, 255, 255, .08);
+  --line-2: rgba(255, 255, 255, .16);
+  --text: #e9eff8;
+  --muted: #93a3b8;
+  --dim: #74849a;
+
+  /* wave colours (--tone, --noise, --anti and --clean are also read by app.js) */
+  --tone: #4cc9f0;    /* the sound you want   */
+  --noise: #ff8a5c;   /* the sound you don't  */
+  --anti: #b794ff;    /* the mirror image     */
+  --clean: #5df2a8;   /* what's left          */
+  --mix: #ffe29a;     /* amber for "ok" states */
+
+  --radius: 20px;
+  --font: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Inter, Helvetica, Arial, sans-serif;
+  --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+  --topbar-h: 58px;       /* kept in sync by app.js */
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+[hidden] { display: none !important; }
+html { scroll-behavior: smooth; -webkit-text-size-adjust: 100%; }
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  background-color: var(--bg);
+  background-image:
+    radial-gradient(1100px 560px at 12% -8%, rgba(76, 201, 240, .11), transparent 60%),
+    radial-gradient(900px 520px at 100% 0%, rgba(183, 148, 255, .11), transparent 55%);
+  background-attachment: fixed;
+  color: var(--text);
+  font: 16px/1.55 var(--font);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* in a phone app the system bar covers the top strip: paint it so nothing scrolls into view above the sticky bar */
+body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-area-inset-top, 0px); z-index: 10; background: var(--bg); }
+
+h1, h2, h3, h4, p { margin: 0; }
+button { font: inherit; color: inherit; }
+kbd {
+  font: .72rem var(--mono); padding: 1px 6px; border: 1px solid var(--line-2);
+  border-bottom-width: 2px; border-radius: 5px; color: var(--text); background: rgba(255, 255, 255, .04);
+}
+
+.sr-only {
+  position: absolute; width: 1px; height: 1px; overflow: hidden;
+  clip: rect(0 0 0 0); white-space: nowrap;
+}
+.skip {
+  position: absolute; left: 12px; top: -48px; z-index: 120; padding: 8px 14px;
+  background: var(--text); color: var(--bg); border-radius: 8px; transition: top .15s;
+}
+.skip:focus { top: 10px; }
+.noscript { padding: 16px clamp(16px, 3vw, 32px); color: var(--muted); }
+
+:focus-visible { outline: 2px solid var(--tone); outline-offset: 3px; }
+
+/* ───────── top bar ───────── */
+.topbar {
+  position: sticky; top: env(safe-area-inset-top, 0px); z-index: 30;
+  display: flex; align-items: center; justify-content: space-between; gap: 16px;
+  padding: 10px clamp(16px, 3vw, 32px);
+  background: rgba(6, 8, 13, .78);
+  -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px);
+  border-bottom: 1px solid var(--line);
+}
+.brand { display: flex; align-items: center; gap: 10px; min-width: 0; }
+.logo { width: 38px; height: 22px; flex: none; }
+.brand-name { font-weight: 700; letter-spacing: .02em; font-size: 1.08rem; }
+.badge {
+  font: 600 .68rem var(--mono); letter-spacing: .08em; text-transform: uppercase;
+  color: var(--clean); border: 1px solid rgba(93, 242, 168, .35);
+  background: rgba(93, 242, 168, .08); padding: 3px 9px; border-radius: 99px; white-space: nowrap;
+}
+.top-actions { display: flex; align-items: center; gap: 10px; }
+
+.btn {
+  display: inline-flex; align-items: center; gap: 8px; cursor: pointer;
+  padding: 7px 14px; border-radius: 99px; font-size: .9rem; font-weight: 600;
+  background: var(--text); color: var(--bg); border: 1px solid transparent;
+  transition: transform .12s, background .2s, border-color .2s;
+}
+.btn:hover { background: #fff; }
+.btn:active { transform: scale(.97); }
+.btn.ghost { background: transparent; color: var(--text); border-color: var(--line-2); }
+.btn.ghost:hover { background: rgba(255, 255, 255, .07); }
+.btn.ghost[aria-expanded="true"] { border-color: rgba(255, 255, 255, .4); background: rgba(255, 255, 255, .08); }
+.btn.sm { padding: 6px 12px; font-size: .84rem; }
+.ico { width: 16px; height: 16px; fill: currentColor; }
+.ico-play { display: none; }
+.btn.is-paused .ico-pause { display: none; }
+.btn.is-paused .ico-play { display: block; }
+
+/* ───────── hero ───────── */
+.hero { max-width: 1120px; margin: 0 auto; padding: clamp(22px, 4vw, 40px) clamp(16px, 3vw, 32px) 16px; }
+.hero h1 { font-size: clamp(1.7rem, 3.9vw, 2.7rem); line-height: 1.1; letter-spacing: -.025em; font-weight: 750; text-wrap: balance; }
+.hero-row { margin-top: 12px; display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 14px 24px; }
+.lede { max-width: 56ch; color: var(--muted); font-size: clamp(.95rem, 1.3vw, 1.05rem); }
+.hero-actions { display: flex; flex-wrap: wrap; gap: 10px; }
+.i-demo {
+  display: inline-grid; place-items: center; width: 1.3em; height: 1.3em; vertical-align: -1px;
+  border: 1px solid var(--line-2); border-radius: 50%; font: 700 .72em var(--mono); color: var(--text);
+}
+
+/* ───────── the explorer card ───────── */
+.lab { max-width: 1120px; margin: 0 auto; padding: 4px clamp(16px, 3vw, 32px) 48px; }
+.card {
+  background: linear-gradient(180deg, var(--panel), var(--bg-2));
+  border: 1px solid var(--line); border-radius: var(--radius);
+  transition: border-color .4s, box-shadow .4s;
+}
+.card.is-clean {
+  border-color: rgba(93, 242, 168, .38);
+  box-shadow: 0 0 0 1px rgba(93, 242, 168, .1), 0 24px 70px -28px rgba(93, 242, 168, .35);
+}
+
+/* tabs */
+.tabs { display: flex; gap: 6px; padding: 10px; border-bottom: 1px solid var(--line); overflow-x: auto; scrollbar-width: none; }
+.tabs::-webkit-scrollbar { display: none; }
+.tab {
+  --c: var(--text);
+  flex: 1 1 0; min-width: max-content; cursor: pointer; white-space: nowrap;
+  display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+  padding: 10px 14px; border-radius: 13px; border: 1px solid transparent; background: transparent;
+  color: var(--muted); font-weight: 650; font-size: .93rem;
+  transition: color .15s, background .15s, border-color .15s, box-shadow .2s;
+}
+.tab .dot { width: 9px; height: 9px; border-radius: 50%; background: var(--c); opacity: .5; transition: opacity .15s, box-shadow .15s; }
+.tab:hover { color: var(--text); background: rgba(255, 255, 255, .045); }
+.tab[aria-selected="true"] {
+  color: var(--text);
+  background: color-mix(in srgb, var(--c) 13%, transparent);
+  border-color: color-mix(in srgb, var(--c) 52%, transparent);
+  box-shadow: 0 0 26px -10px var(--c);
+}
+.tab[aria-selected="true"] .dot { opacity: 1; box-shadow: 0 0 10px var(--c); }
+.t-music { --c: var(--tone); } .t-noise { --c: var(--noise); } .t-anti { --c: var(--anti); }
+.t-total { --c: #dfe7f3; }
+.t-total .dot { background: conic-gradient(var(--tone), var(--noise), var(--anti), var(--tone)); }
+
+/* heading of the current wave */
+.v-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 14px; padding: 16px 18px 10px; }
+.v-titles { min-width: 0; }
+.v-titles h2 { font-size: 1.3rem; letter-spacing: -.01em; }
+.v-titles p { margin-top: 2px; color: var(--muted); font-size: .92rem; max-width: 62ch; }
+.v-tools { display: flex; align-items: center; gap: 10px; flex: none; }
+
+/* scope */
+.scope-wrap { padding: 0 14px; }
+.scope {
+  position: relative; height: clamp(200px, 36vh, 340px); border-radius: 14px; overflow: hidden;
+  background: radial-gradient(120% 90% at 50% 0%, rgba(255, 255, 255, .035), transparent 70%), #080c13;
+  border: 1px solid var(--line);
+}
+.scope canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; touch-action: pan-y; cursor: crosshair; }
+.ear {
+  position: absolute; right: 0; top: 0; bottom: 0; width: 56px; pointer-events: none; display: none;
+  flex-direction: column; align-items: center; justify-content: flex-end; gap: 2px; padding-bottom: 22px;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, .05));
+  border-left: 1px dashed rgba(255, 255, 255, .12);
+}
+.card[data-tab="total"] .ear { display: flex; }
+.ear svg { width: 24px; height: 24px; fill: none; stroke: var(--muted); stroke-width: 1.5; stroke-linecap: round; }
+.ear span { font: 600 .62rem var(--mono); letter-spacing: .1em; text-transform: uppercase; color: var(--dim); }
+
+/* readouts + speed */
+.v-foot { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px 16px; padding: 12px 18px 4px; }
+.readouts { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; min-height: 32px; }
+.ro {
+  display: inline-flex; align-items: center; gap: 8px; cursor: pointer;
+  padding: 5px 7px 5px 12px; border-radius: 99px; border: 1px solid var(--line-2);
+  background: rgba(255, 255, 255, .03); color: var(--muted); font-size: .82rem;
+  transition: border-color .15s, background .15s;
+}
+.ro:hover, .ro[aria-expanded="true"] { border-color: rgba(255, 255, 255, .34); background: rgba(255, 255, 255, .07); }
+.ro-value { font: 650 .84rem var(--mono); color: var(--text); font-variant-numeric: tabular-nums; }
+.ro[data-state="good"] .ro-value { color: var(--clean); }
+.ro[data-state="ok"] .ro-value { color: var(--mix); }
+.ro[data-state="bad"] .ro-value { color: #ff6b6b; }
+.ro-i {
+  display: inline-grid; place-items: center; width: 17px; height: 17px; border-radius: 50%;
+  border: 1px solid var(--line-2); font: 700 .62rem/1 var(--mono); font-style: normal; color: var(--muted);
+}
+
+.chip { position: relative; cursor: pointer; }
+.chip input { position: absolute; opacity: 0; inset: 0; margin: 0; cursor: pointer; }
+.chip span {
+  display: inline-flex; align-items: center; gap: 7px; padding: 4px 11px 4px 9px;
+  border-radius: 99px; border: 1px solid var(--line-2); color: var(--muted);
+  font-size: .8rem; font-weight: 550; user-select: none; transition: all .15s;
+}
+.chip span::before { content: ""; width: 9px; height: 9px; border-radius: 50%; background: var(--c); opacity: .35; transition: opacity .15s, box-shadow .15s; }
+.chip input:checked + span { color: var(--text); border-color: color-mix(in srgb, var(--c) 55%, transparent); background: color-mix(in srgb, var(--c) 12%, transparent); }
+.chip input:checked + span::before { opacity: 1; box-shadow: 0 0 10px var(--c); }
+.chip input:focus-visible + span { outline: 2px solid var(--tone); outline-offset: 2px; }
+.c-tone { --c: var(--tone); } .c-noise { --c: var(--noise); } .c-anti { --c: var(--anti); }
+
+.pill {
+  font: 600 .75rem var(--mono); padding: 4px 12px; border-radius: 99px; border: 1px solid; white-space: nowrap;
+}
+.pill[data-state="good"] { color: var(--clean); border-color: rgba(93, 242, 168, .45); background: rgba(93, 242, 168, .1); }
+.pill[data-state="ok"]   { color: var(--mix);   border-color: rgba(255, 226, 154, .4); background: rgba(255, 226, 154, .08); }
+.pill[data-state="bad"]  { color: #ff6b6b;      border-color: rgba(255, 107, 107, .5); background: rgba(255, 107, 107, .1); }
+.pill[data-state="off"]  { color: var(--muted); border-color: var(--line-2); background: rgba(255, 255, 255, .04); }
+
+.speed { display: flex; align-items: center; gap: 6px; border: 0; padding: 0; margin: 0; min-width: 0; }
+.speed-label { font: 600 .68rem var(--mono); letter-spacing: .1em; text-transform: uppercase; color: var(--dim); margin-right: 2px; }
+.speed label { position: relative; cursor: pointer; }
+.speed input { position: absolute; opacity: 0; inset: 0; margin: 0; cursor: pointer; }
+.speed label span {
+  display: block; padding: 3px 10px; border-radius: 99px; border: 1px solid var(--line-2);
+  font: 600 .78rem var(--mono); color: var(--muted); user-select: none; transition: all .15s;
+}
+.speed label:hover span { color: var(--text); }
+.speed input:checked + span { color: var(--text); border-color: rgba(255, 255, 255, .4); background: rgba(255, 255, 255, .08); }
+.speed input:focus-visible + span { outline: 2px solid var(--tone); outline-offset: 2px; }
+
+/* switch */
+.switch {
+  display: inline-flex; align-items: center; gap: 10px; cursor: pointer;
+  padding: 4px 14px 4px 5px; border-radius: 99px; border: 1px solid var(--line-2);
+  background: rgba(255, 255, 255, .04); font-size: .86rem; color: var(--muted);
+}
+.switch:hover { background: rgba(255, 255, 255, .08); }
+.switch .track { position: relative; width: 42px; height: 24px; border-radius: 99px; background: rgba(255, 255, 255, .16); transition: background .25s; }
+.switch .knob { position: absolute; top: 3px; left: 3px; width: 18px; height: 18px; border-radius: 50%; background: #fff; transition: transform .25s cubic-bezier(.3, .8, .3, 1); }
+.switch[aria-checked="true"] .track { background: var(--clean); }
+.switch[aria-checked="true"] .knob { transform: translateX(18px); }
+.switch b { color: var(--text); font-family: var(--mono); }
+
+/* info buttons */
+.info {
+  position: relative; flex: none; width: 20px; height: 20px; padding: 0; border-radius: 50%;
+  border: 1px solid var(--line-2); background: transparent; color: var(--muted);
+  font: 700 .68rem/1 var(--mono); cursor: pointer; display: inline-grid; place-items: center;
+  transition: color .15s, border-color .15s, background .15s;
+}
+.info::after { content: ""; position: absolute; inset: -9px; }       /* bigger touch target */
+.info:hover, .info[aria-expanded="true"] { color: var(--text); border-color: var(--tone); background: rgba(76, 201, 240, .14); }
+.info-lg { width: 30px; height: 30px; font-size: .85rem; }
+
+/* ───────── controls ───────── */
+.controls { display: grid; gap: 18px 32px; padding: 14px 18px 20px; margin-top: 10px; border-top: 1px solid var(--line); }
+.group { min-width: 0; }
+.group-title { display: none; align-items: center; gap: 9px; margin: 0 0 8px; font-size: .88rem; letter-spacing: .01em; }
+.dot { width: 9px; height: 9px; border-radius: 50%; display: inline-block; }
+.d-tone { background: var(--tone); box-shadow: 0 0 10px var(--tone); }
+.d-noise { background: var(--noise); box-shadow: 0 0 10px var(--noise); }
+.d-anti { background: var(--anti); box-shadow: 0 0 10px var(--anti); }
+
+/* each wave tab shows only its own sliders; the Total tab shows all of them */
+.card[data-tab="music"] .g-noise, .card[data-tab="music"] .g-anti,
+.card[data-tab="noise"] .g-music, .card[data-tab="noise"] .g-anti,
+.card[data-tab="anti"] .g-music, .card[data-tab="anti"] .g-noise { display: none; }
+.card[data-tab="total"] .group-title { display: flex; }
+.card[data-tab="total"] .controls { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.card[data-tab="total"] .sliders { grid-template-columns: minmax(0, 1fr); }
+
+.sliders { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 2px 32px; }
+.field { --c: var(--tone); margin-bottom: 8px; min-width: 0; }
+.field.s-tone { --c: var(--tone); } .field.s-noise { --c: var(--noise); } .field.s-anti { --c: var(--anti); }
+.field-top { display: flex; align-items: center; gap: 8px; }
+.field label, .field-label { font-size: .88rem; color: var(--muted); font-weight: 550; }
+.field output { margin-left: auto; font: 600 .84rem var(--mono); color: var(--text); font-variant-numeric: tabular-nums; text-align: right; }
+.noise-type { margin-bottom: 8px; }
+
+.range-wrap { position: relative; }
+.range-wrap .mark { position: absolute; left: 50%; top: 4px; width: 2px; height: 20px; margin-left: -1px; border-radius: 2px; background: rgba(255, 255, 255, .3); pointer-events: none; }
+
+input[type="range"] {
+  --p: 50%;
+  -webkit-appearance: none; appearance: none; display: block;
+  width: 100%; height: 28px; margin: 0; background: transparent; cursor: pointer;
+}
+input[type="range"]:focus-visible { outline: 2px solid var(--tone); outline-offset: 0; border-radius: 8px; }
+input[type="range"]::-webkit-slider-runnable-track { height: 6px; border-radius: 99px; background: linear-gradient(90deg, var(--c) var(--p), rgba(255, 255, 255, .12) var(--p)); }
+input[type="range"]::-moz-range-track { height: 6px; border-radius: 99px; background: rgba(255, 255, 255, .12); }
+input[type="range"]::-moz-range-progress { height: 6px; border-radius: 99px; background: var(--c); }
+input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none; width: 18px; height: 18px; margin-top: -6px; border-radius: 50%;
+  background: #fff; border: 3px solid var(--c); box-shadow: 0 0 0 0 transparent; transition: box-shadow .15s;
+}
+input[type="range"]::-moz-range-thumb { width: 12px; height: 12px; border-radius: 50%; background: #fff; border: 3px solid var(--c); }
+input[type="range"]:hover::-webkit-slider-thumb { box-shadow: 0 0 0 6px color-mix(in srgb, var(--c) 22%, transparent); }
+input[type="range"]:focus-visible::-webkit-slider-thumb { box-shadow: 0 0 0 6px color-mix(in srgb, var(--c) 40%, transparent); }
+input[type="range"]:focus-visible::-moz-range-thumb { box-shadow: 0 0 0 6px color-mix(in srgb, var(--c) 40%, transparent); }
+
+.seg { display: grid; grid-template-columns: repeat(auto-fit, minmax(104px, 1fr)); gap: 6px; border: 0; padding: 0; margin: 4px 0 0; min-width: 0; }
+.seg label { position: relative; cursor: pointer; }
+.seg input { position: absolute; opacity: 0; inset: 0; margin: 0; cursor: pointer; }
+.seg span {
+  display: block; text-align: center; padding: 7px 6px; font-size: .82rem; font-weight: 600; color: var(--muted);
+  border: 1px solid var(--line-2); border-radius: 10px; transition: all .15s; user-select: none;
+}
+.seg label:hover span { color: var(--text); }
+.seg input:checked + span { color: var(--text); border-color: rgba(255, 138, 92, .6); background: rgba(255, 138, 92, .12); }
+.seg input:focus-visible + span { outline: 2px solid var(--tone); outline-offset: 2px; }
+
+.footer { border-top: 1px solid var(--line); padding: 22px clamp(16px, 3vw, 32px); color: var(--dim); font-size: .84rem; text-align: center; }
+
+/* ───────── pop-ups ───────── */
+.pop-backdrop {
+  position: fixed; inset: 0; z-index: 90; background: rgba(3, 5, 9, .6);
+  -webkit-backdrop-filter: blur(3px); backdrop-filter: blur(3px); animation: fade .16s ease-out;
+}
+.pop {
+  position: fixed; z-index: 100; overflow: auto; padding: 18px 20px 20px; border-radius: 18px;
+  background: var(--panel-2); border: 1px solid var(--line-2);
+  box-shadow: 0 30px 80px -16px rgba(0, 0, 0, .85);
+  animation: pop-in .16s ease-out;
+}
+.pop:focus { outline: none; }
+.pop h3 { font-size: 1.05rem; letter-spacing: -.005em; margin: 0 30px 8px 0; }
+.pop h4 { font-size: .98rem; }
+.pop p { color: var(--muted); font-size: .92rem; }
+.pop p + p { margin-top: 8px; }
+.pop b { color: var(--text); font-weight: 650; }
+.pop-close {
+  position: absolute; top: 10px; right: 10px; width: 30px; height: 30px; border-radius: 50%; border: 0;
+  background: transparent; color: var(--muted); font-size: 1.3rem; line-height: 1; cursor: pointer;
+}
+.pop-close:hover { color: var(--text); background: rgba(255, 255, 255, .08); }
+.pop-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; }
+.pop-actions:empty { display: none; }
+
+.pop-sm { width: min(360px, calc(100vw - 24px)); max-height: min(70vh, 520px); }
+.pop-lg { left: 50%; top: 50%; translate: -50% -50%; width: min(900px, calc(100vw - 24px)); max-height: calc(100vh - 32px); max-height: calc(100dvh - 32px); padding: 24px 26px 26px; }
+
+.steps { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; margin-top: 14px; }
+.step { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 12px 12px 16px; }
+.mini { display: block; width: 100%; height: 100px; border-radius: 10px; background: #080c13; border: 1px solid var(--line); margin-bottom: 12px; }
+.step h4 { display: flex; align-items: center; gap: 10px; margin-bottom: 4px; font-size: 1.02rem; }
+.step h4 span { display: grid; place-items: center; width: 22px; height: 22px; border-radius: 50%; font: 700 .74rem var(--mono); color: var(--bg); background: var(--tone); }
+.step:nth-child(2) h4 span { background: var(--anti); }
+.step:nth-child(3) h4 span { background: var(--clean); }
+.step p { font-size: .88rem; }
+
+.limits { margin-top: 20px; display: grid; gap: 8px; }
+.limits ul { margin: 0; padding: 0; list-style: none; display: grid; gap: 8px; }
+.limits li { color: var(--muted); padding-left: 16px; position: relative; font-size: .9rem; }
+.limits li::before { content: ""; position: absolute; left: 0; top: .6em; width: 6px; height: 6px; border-radius: 50%; background: var(--anti); }
+.limits b { color: var(--text); }
+.limits em { color: var(--anti); font-style: normal; font-weight: 600; }
+.shortcuts { margin-top: 18px; color: var(--dim); font-size: .82rem; }
+
+@keyframes fade { from { opacity: 0; } }
+@keyframes pop-in { from { opacity: 0; transform: translateY(6px) scale(.985); } }
+
+/* ───────── responsive ───────── */
+@media (max-width: 900px) {
+  .card[data-tab="total"] .controls { grid-template-columns: minmax(0, 1fr); }
+  .card[data-tab="total"] .sliders { grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); }
+  .steps { grid-template-columns: minmax(0, 1fr); }
+  .mini { height: 90px; }
+}
+
+@media (max-width: 760px) {
+  /* keep the wave in view while you drag the sliders underneath it */
+  .scope-wrap {
+    position: sticky; top: calc(env(safe-area-inset-top, 0px) + var(--topbar-h)); z-index: 15;
+    padding: 8px 14px 10px; background: var(--panel); border-bottom: 1px solid var(--line);
+  }
+  .scope { height: 190px; }
+  /* title + "i" share the first row; the cancelling switch (when shown) gets the row below */
+  .v-head { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px 12px; }
+  .v-tools { display: contents; }
+  #btn-tab-info { grid-column: 2; grid-row: 1; }
+  .switch { grid-column: 1 / -1; grid-row: 2; justify-self: start; }
+}
+
+/* short landscape phones: pinning the bar and a tall wave would leave almost no room for the sliders */
+@media (max-width: 760px) and (max-height: 480px) {
+  .topbar { position: static; }
+  .scope-wrap { top: 0; padding-top: 6px; padding-bottom: 8px; }
+  .scope { height: 120px; }
+}
+
+@media (max-width: 560px) {
+  .badge { display: none; }
+  .tabs { padding: 8px 6px; gap: 2px; }
+  .tab { flex: 1 1 auto; min-width: 0; padding: 9px 6px; gap: 5px; font-size: .8rem; }
+  .tab .dot { display: none; }
+  .v-head, .v-foot, .controls { padding-left: 12px; padding-right: 12px; }
+  .scope-wrap { padding-left: 8px; padding-right: 8px; }
+  .ear { width: 40px; }
+  .hero-actions .btn { flex: 1; justify-content: center; }
+  /* pop-ups become bottom sheets */
+  .pop-sm { left: 8px !important; right: 8px; top: auto !important; bottom: calc(8px + env(safe-area-inset-bottom, 0px)); width: auto; max-height: 75vh; }
+  .pop-lg { width: calc(100vw - 16px); padding: 20px 16px 18px; }
+}
+
+@media (max-width: 400px) {
+  .hero-actions .btn { padding-inline: 10px; font-size: .86rem; white-space: nowrap; }
+}
+/* very narrow phones: the top bar gets crowded, so Pause shows just its icon (the label stays for screen readers) */
+@media (max-width: 360px) {
+  .topbar { gap: 8px; }
+  .brand { gap: 8px; }
+  .logo { width: 30px; }
+  .brand-name { font-size: 1rem; }
+  .top-actions { gap: 8px; }
+  #btn-play-label { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  *, *::before, *::after { animation: none !important; transition: none !important; }
+}
+  </style>
+</head>
+<body>
+  <a class="skip" href="#lab">Skip to the waves</a>
+
+  <header class="topbar" id="topbar">
+    <div class="brand">
+      <svg class="logo" viewBox="0 0 40 24" aria-hidden="true">
+        <path d="M2 12C6 0 10 0 14 12S22 24 26 12 34 0 38 12" fill="none" stroke="var(--noise)" stroke-width="2.6" stroke-linecap="round"/>
+        <path d="M2 12C6 24 10 24 14 12S22 0 26 12 34 24 38 12" fill="none" stroke="var(--anti)" stroke-width="2.6" stroke-linecap="round"/>
+      </svg>
+      <span class="brand-name">Antiphase</span>
+      <span class="badge">For the GV Hackathon</span>
+    </div>
+    <nav class="top-actions" aria-label="Playback">
+      <button class="btn" id="btn-play" type="button" aria-keyshortcuts="K">
+        <svg class="ico ico-pause" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 5h3.5v14H7zM13.5 5H17v14h-3.5z"/></svg>
+        <svg class="ico ico-play" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5.5v13l11-6.5z"/></svg>
+        <span id="btn-play-label">Pause</span>
+      </button>
+      <button class="btn ghost" id="btn-reset" type="button">Reset</button>
+    </nav>
+  </header>
+
+  <main>
+    <noscript><p class="noscript">This page draws its waves with JavaScript. Please turn it on.</p></noscript>
+
+    <section class="hero">
+      <h1>Silence is just a wave added to a wave.</h1>
+      <div class="hero-row">
+        <p class="lede">Pick a tab to see each wave, then watch how they add up. Tap any <span class="i-demo">i</span> button for the details.</p>
+        <div class="hero-actions">
+          <button class="btn ghost" type="button" data-dialog="dlg-how" aria-haspopup="dialog" aria-expanded="false">How it works</button>
+        </div>
+      </div>
+    </section>
+
+    <section class="lab" id="lab" aria-label="Wave explorer">
+      <div class="card" id="card" data-tab="music">
+
+        <div class="tabs" role="tablist" aria-label="Choose a wave" id="tablist">
+          <button class="tab t-music" role="tab" id="tab-music" data-tab="music" aria-selected="true" aria-controls="tabpanel" type="button"><i class="dot"></i><span>Music</span></button>
+          <button class="tab t-noise" role="tab" id="tab-noise" data-tab="noise" aria-selected="false" aria-controls="tabpanel" tabindex="-1" type="button"><i class="dot"></i><span>Noise</span></button>
+          <button class="tab t-anti" role="tab" id="tab-anti" data-tab="anti" aria-selected="false" aria-controls="tabpanel" tabindex="-1" type="button"><i class="dot"></i><span>Anti-noise</span></button>
+          <button class="tab t-total" role="tab" id="tab-total" data-tab="total" aria-selected="false" aria-controls="tabpanel" tabindex="-1" type="button"><i class="dot"></i><span>Total</span></button>
+        </div>
+
+        <div class="tabpanel" id="tabpanel" role="tabpanel" aria-labelledby="tab-music">
+
+          <div class="v-head">
+            <div class="v-titles">
+              <h2 id="v-title">Music</h2>
+              <p id="v-desc"></p>
+            </div>
+            <div class="v-tools">
+              <button class="switch" id="sw-cancel" type="button" role="switch" aria-checked="true" hidden>
+                <span class="track"><span class="knob"></span></span>
+                <span class="switch-label">Cancelling <b id="sw-cancel-state">ON</b></span>
+              </button>
+              <button class="info info-lg" id="btn-tab-info" type="button" data-info="tab-music" aria-haspopup="dialog" aria-expanded="false" aria-label="More about this wave">i</button>
+            </div>
+          </div>
+
+          <div class="scope-wrap">
+            <div class="scope">
+              <canvas id="cv-main" role="img" aria-label="Waveform"></canvas>
+              <div class="ear" aria-hidden="true">
+                <svg viewBox="0 0 24 24"><path d="M7 9.5a5 5 0 0 1 10 0c0 2.6-2.1 3.3-2.7 5.1-.5 1.6-1.4 3-3.4 3a3 3 0 0 1-3-3"/><path d="M10.2 9.5a1.8 1.8 0 0 1 3.6 0c0 1-.9 1.4-1.3 2.2"/></svg>
+                <span>you</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="v-foot">
+            <div class="readouts" id="readouts" role="group" aria-label="Readouts"></div>
+            <fieldset class="speed">
+              <legend class="sr-only">Animation speed</legend>
+              <span class="speed-label" aria-hidden="true">Speed</span>
+              <label><input type="radio" name="speed" value="0.5"><span>½×</span></label>
+              <label><input type="radio" name="speed" value="1" checked><span>1×</span></label>
+              <label><input type="radio" name="speed" value="2"><span>2×</span></label>
+              <button class="info" type="button" data-info="speed" aria-haspopup="dialog" aria-expanded="false" aria-label="About speed">i</button>
+            </fieldset>
+          </div>
+
+          <div class="controls" id="controls">
+
+            <section class="group g-music" aria-labelledby="gt-music">
+              <h3 class="group-title" id="gt-music"><i class="dot d-tone"></i>Music</h3>
+              <div class="sliders">
+                <div class="field s-tone">
+                  <div class="field-top"><label for="ctl-pitch">Pitch</label><button class="info" type="button" data-info="pitch" aria-haspopup="dialog" aria-expanded="false" aria-label="About pitch">i</button><output id="out-pitch" for="ctl-pitch"></output></div>
+                  <input type="range" id="ctl-pitch">
+                </div>
+                <div class="field s-tone">
+                  <div class="field-top"><label for="ctl-volume">Volume</label><button class="info" type="button" data-info="volume" aria-haspopup="dialog" aria-expanded="false" aria-label="About volume">i</button><output id="out-volume" for="ctl-volume"></output></div>
+                  <input type="range" id="ctl-volume">
+                </div>
+              </div>
+            </section>
+
+            <section class="group g-noise" aria-labelledby="gt-noise">
+              <h3 class="group-title" id="gt-noise"><i class="dot d-noise"></i>Noise</h3>
+              <div class="noise-type">
+                <div class="field-top"><span class="field-label" id="lbl-noiseType">Type of noise</span><button class="info" type="button" data-info="noiseType" aria-haspopup="dialog" aria-expanded="false" aria-label="About noise types">i</button></div>
+                <fieldset class="seg" aria-labelledby="lbl-noiseType">
+                  <label><input type="radio" name="noiseType" value="engine" checked><span>Engine hum</span></label>
+                  <label><input type="radio" name="noiseType" value="traffic"><span>Traffic</span></label>
+                  <label><input type="radio" name="noiseType" value="crowd"><span>Crowd</span></label>
+                  <label><input type="radio" name="noiseType" value="hiss"><span>Air-con hiss</span></label>
+                </fieldset>
+              </div>
+              <div class="sliders">
+                <div class="field s-noise">
+                  <div class="field-top"><label for="ctl-noisePitch">Noise pitch</label><button class="info" type="button" data-info="noisePitch" aria-haspopup="dialog" aria-expanded="false" aria-label="About noise pitch">i</button><output id="out-noisePitch" for="ctl-noisePitch"></output></div>
+                  <input type="range" id="ctl-noisePitch">
+                </div>
+                <div class="field s-noise">
+                  <div class="field-top"><label for="ctl-noiseLevel">Noise loudness</label><button class="info" type="button" data-info="noiseLevel" aria-haspopup="dialog" aria-expanded="false" aria-label="About noise loudness">i</button><output id="out-noiseLevel" for="ctl-noiseLevel"></output></div>
+                  <input type="range" id="ctl-noiseLevel">
+                </div>
+              </div>
+            </section>
+
+            <section class="group g-anti" aria-labelledby="gt-anti">
+              <h3 class="group-title" id="gt-anti"><i class="dot d-anti"></i>Anti-noise</h3>
+              <div class="sliders">
+                <div class="field s-anti">
+                  <div class="field-top"><label for="ctl-phase">Phase</label><button class="info" type="button" data-info="phase" aria-haspopup="dialog" aria-expanded="false" aria-label="About phase">i</button><output id="out-phase" for="ctl-phase"></output></div>
+                  <div class="range-wrap"><input type="range" id="ctl-phase"><span class="mark" aria-hidden="true"></span></div>
+                </div>
+                <div class="field s-anti">
+                  <div class="field-top"><label for="ctl-gain">Anti-noise loudness</label><button class="info" type="button" data-info="gain" aria-haspopup="dialog" aria-expanded="false" aria-label="About anti-noise loudness">i</button><output id="out-gain" for="ctl-gain"></output></div>
+                  <input type="range" id="ctl-gain">
+                </div>
+                <div class="field s-anti">
+                  <div class="field-top"><label for="ctl-latency">Chip delay</label><button class="info" type="button" data-info="latency" aria-haspopup="dialog" aria-expanded="false" aria-label="About chip delay">i</button><output id="out-latency" for="ctl-latency"></output></div>
+                  <input type="range" id="ctl-latency">
+                </div>
+              </div>
+            </section>
+
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="footer">
+    <p>Antiphase · built for the GV Hackathon · visual prototype, audio coming soon</p>
+  </footer>
+
+  <!-- ───────── pop-ups ───────── -->
+  <div class="pop-backdrop" id="pop-backdrop" hidden></div>
+
+  <!-- small info pop-up, filled in by app.js -->
+  <div class="pop pop-sm" id="pop" role="dialog" aria-modal="false" aria-labelledby="pop-title" tabindex="-1" hidden>
+    <button class="pop-close" type="button" aria-label="Close">×</button>
+    <h3 id="pop-title"></h3>
+    <div class="pop-body" id="pop-body"></div>
+    <div class="pop-actions" id="pop-actions"></div>
+  </div>
+
+  <!-- how it works -->
+  <div class="pop pop-lg" id="dlg-how" role="dialog" aria-modal="true" aria-labelledby="dlg-how-title" tabindex="-1" hidden>
+    <button class="pop-close" type="button" aria-label="Close">×</button>
+    <h3 id="dlg-how-title">How noise cancelling works</h3>
+    <div class="steps">
+      <article class="step">
+        <canvas class="mini" data-kind="listen" role="img" aria-label="An orange noise wave"></canvas>
+        <h4><span>1</span>Listen</h4>
+        <p>A tiny microphone on the headphones hears the noise outside: engines, air-con, chatter.</p>
+      </article>
+      <article class="step">
+        <canvas class="mini" data-kind="flip" role="img" aria-label="The orange noise wave and its violet upside-down mirror image"></canvas>
+        <h4><span>2</span>Flip</h4>
+        <p>A chip builds the mirror image of that wave in a fraction of a millisecond. Every peak becomes a valley.</p>
+      </article>
+      <article class="step">
+        <canvas class="mini" data-kind="sum" role="img" aria-label="The two waves added together make a flat green line"></canvas>
+        <h4><span>3</span>Cancel</h4>
+        <p>The speaker plays the flipped wave. Peaks meet valleys, the sum is flat, and the noise is gone. Your music was never in the mic signal, so it passes through untouched.</p>
+      </article>
+    </div>
+    <div class="limits">
+      <h4>Why it isn’t magic</h4>
+      <ul>
+        <li><b>Speed.</b> The chip has to react before the sound reaches your ear. Slow it down and high-pitched noise is the first to escape. Try the <em>Chip delay</em> slider.</li>
+        <li><b>Accuracy.</b> The mirror must match in loudness and timing. If it’s off, you only get partial cancelling, none, or even more noise.</li>
+        <li><b>Predictability.</b> Steady, low sounds (engines, air-con) cancel best. A sudden bark or clap is over before the chip can answer.</li>
+      </ul>
+    </div>
+    <p class="shortcuts"><kbd>1</kbd>–<kbd>4</kbd> switch tabs · <kbd>K</kbd> pause or play</p>
+  </div>
+
+  <p class="sr-only" id="sr-status" aria-live="polite"></p>
+
+  <script>
+/*!
+ * Antiphase · signal model
+ *
+ * Pure maths, no DOM. The renderer (app.js) asks this module for waveform
+ * samples and statistics; it never does any signal maths itself.
+ *
+ * AUDIO SEAM: when real audio is added, this is where it plugs in. Replace
+ * the synthetic tone / noise generators in `sample()` with data read from the
+ * Web Audio API (an AnalyserNode or AudioWorklet), and keep everything else.
+ *
+ * Model
+ *   tone(t)   = volume · sin(2π·pitch·t)                    the sound you WANT
+ *   noise(t)  = Σ aᵢ · sin(2π·fᵢ·t + θᵢ)   (Σ aᵢ² = 1)      the sound you DON'T
+ *   anti(t)   = gain · Σ aᵢ · sin(2π·fᵢ·t + θᵢ + ψᵢ)         what the speaker plays
+ *   ψᵢ        = phase − 2π·fᵢ·latency                         (180° = exact mirror)
+ *   you hear  = tone + noise + anti
+ *
+ * The microphone only hears the noise, so the tone passes through untouched.
+ * Because each noise component's residual has a closed form,
+ *   |aᵢ·(1 + g·e^{jψᵢ})|² = aᵢ² · (1 + g² + 2g·cos ψᵢ),
+ * `stats()` is exact and smooth (no sampling needed).
+ */
+(function (root, factory) {
+  if (typeof module === 'object' && module.exports) module.exports = factory();
+  else root.AntiphaseModel = factory();
+}(typeof self !== 'undefined' ? self : this, function () {
+  'use strict';
+
+  const TAU = Math.PI * 2;
+  const MAX_HZ = 3200;                    // keep the picture legible
+  const MAX_COMPONENTS = 32;
+  const FULL_SCALE_RMS = Math.SQRT1_2;    // rms of a full-scale sine
+  const FULL_SCALE_DB = 80;               // illustrative: full-scale sine ≙ 80 dB
+  const MAX_REDUCTION_DB = 60;
+
+  const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v));
+
+  /* ---------- deterministic noise recipes ---------- */
+
+  function mulberry32(seed) {
+    let a = seed >>> 0;
+    return function () {
+      a = (a + 0x6D2B79F5) | 0;
+      let t = Math.imul(a ^ (a >>> 15), 1 | a);
+      t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+      return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+    };
+  }
+
+  function normalise(comps) {
+    let s = 0;
+    for (const c of comps) s += c.a * c.a;
+    const k = 1 / Math.sqrt(s);
+    for (const c of comps) c.a *= k;
+    return comps;
+  }
+
+  // m = frequency multiplier of the base pitch, a = amplitude, th = start phase
+  function harmonics(mults, amps, seed) {
+    const r = mulberry32(seed);
+    return normalise(mults.map((m, i) => ({ m, a: amps[i], th: r() * TAU })));
+  }
+
+  function spread(n, lo, hi, seed, tilt) {
+    const r = mulberry32(seed);
+    const comps = [];
+    for (let i = 0; i < n; i++) {
+      const m = lo + (hi - lo) * (i + 0.15 + r() * 0.7) / n;
+      comps.push({ m, a: (0.55 + r() * 0.45) / Math.pow(m, tilt), th: r() * TAU });
+    }
+    return normalise(comps);
+  }
+
+  const NOISE_TYPES = {
+    engine:  { label: 'Engine hum',   baseHz: 110, blurb: 'Low, steady and tonal: the easy case.',
+               comps: harmonics([1, 2, 3, 4, 6], [1, 0.62, 0.4, 0.24, 0.12], 11) },
+    traffic: { label: 'Traffic',      baseHz: 180, blurb: 'A low rumble with a bit of everything on top.',
+               comps: spread(7, 0.55, 3.2, 23, 1.1) },
+    crowd:   { label: 'Crowd',        baseHz: 300, blurb: 'Overlapping voices: busy and hard to predict.',
+               comps: spread(14, 0.7, 3.6, 37, 0.2) },
+    hiss:    { label: 'Air-con hiss', baseHz: 700, blurb: 'High-pitched and fast: the hard case.',
+               comps: spread(18, 0.8, 3.4, 51, 0) },
+  };
+
+  function toDb(rms) {
+    return Math.max(0, FULL_SCALE_DB + 20 * Math.log10(Math.max(rms, 1e-9) / FULL_SCALE_RMS));
+  }
+
+  function createBuffers(n) {
+    return { tone: new Float32Array(n), noise: new Float32Array(n), anti: new Float32Array(n) };
+  }
+
+  /* ---------- the model ---------- */
+
+  function createModel(initial) {
+    const params = Object.assign({
+      pitch: 440,            // Hz   — the sound you want
+      volume: 0.6,           // 0–1
+      noiseType: 'engine',
+      noisePitch: NOISE_TYPES.engine.baseHz,   // Hz — base of the noise
+      noiseLevel: 0.6,       // 0–1
+      phase: 180,            // degrees; 180 = exact mirror image
+      gain: 1,               // anti-noise loudness, 1 = same as the noise
+      latency: 0,            // ms the canceller takes to react
+      cancel: 1,             // 0–1 master on/off (eased by the UI)
+    }, initial);
+
+    let comps = NOISE_TYPES[params.noiseType].comps;
+
+    // running phases: continuous, so changing pitch glides instead of jumping
+    const phi = { tone: 0, noise: new Float64Array(MAX_COMPONENTS) };
+    // scratch space for sample()
+    const S = {
+      w: new Float64Array(MAX_COMPONENTS), ph: new Float64Array(MAX_COMPONENTS),
+      psi: new Float64Array(MAX_COMPONENTS), amp: new Float64Array(MAX_COMPONENTS),
+    };
+
+    const freqOf = c => Math.min(MAX_HZ, c.m * params.noisePitch);
+
+    function setNoiseType(type) {
+      if (!NOISE_TYPES[type]) return;
+      params.noiseType = type;
+      comps = NOISE_TYPES[type].comps;
+    }
+
+    // dTau = seconds of *signal* time to advance (a small fraction of real time = slow motion)
+    function advance(dTau) {
+      phi.tone = (phi.tone - TAU * params.pitch * dTau) % TAU;
+      for (let i = 0; i < comps.length; i++) {
+        phi.noise[i] = (phi.noise[i] - TAU * freqOf(comps[i]) * dTau) % TAU;
+      }
+    }
+
+    // Fill out.tone / out.noise / out.anti with n samples spanning windowSec.
+    function sample(out, n, windowSec) {
+      const p = params;
+      const nc = comps.length;
+      const g = p.gain * p.cancel;
+      const psi0 = p.phase * Math.PI / 180;
+      const lat = p.latency * 1e-3;
+      for (let k = 0; k < nc; k++) {
+        const c = comps[k], f = freqOf(c);
+        S.w[k] = TAU * f;
+        S.ph[k] = c.th + phi.noise[k];
+        S.psi[k] = psi0 - TAU * f * lat;
+        S.amp[k] = p.noiseLevel * c.a;
+      }
+      const wt = TAU * p.pitch;
+      const dx = n > 1 ? windowSec / (n - 1) : 0;
+      for (let i = 0; i < n; i++) {
+        const x = i * dx;
+        let nz = 0, an = 0;
+        for (let k = 0; k < nc; k++) {
+          const arg = S.w[k] * x + S.ph[k];
+          nz += S.amp[k] * Math.sin(arg);
+          an += S.amp[k] * Math.sin(arg + S.psi[k]);
+        }
+        out.tone[i] = p.volume * Math.sin(wt * x + phi.tone);
+        out.noise[i] = nz;
+        out.anti[i] = g * an;
+      }
+    }
+
+    // Exact levels (illustrative dB) and the noise reduction.
+    function stats() {
+      const p = params;
+      const g = p.gain * p.cancel;
+      const psi0 = p.phase * Math.PI / 180;
+      const lat = p.latency * 1e-3;
+      let residual = 0;                                   // Σ aᵢ²(1 + g² + 2g·cos ψᵢ)
+      for (const c of comps) {
+        const psi = psi0 - TAU * freqOf(c) * lat;
+        residual += c.a * c.a * (1 + g * g + 2 * g * Math.cos(psi));
+      }
+      residual = Math.max(0, residual);
+      const noiseRms = p.noiseLevel * FULL_SCALE_RMS;
+      const residRms = noiseRms * Math.sqrt(residual);
+      const toneRms = p.volume * FULL_SCALE_RMS;
+      return {
+        hasNoise: p.noiseLevel >= 0.005,
+        toneDb: toDb(toneRms),
+        noiseDb: toDb(noiseRms),
+        residDb: toDb(residRms),
+        antiDb: toDb(noiseRms * g),                         // level of the anti-noise itself
+        // positive = quieter, negative = louder
+        reductionDb: residual < 1e-6
+          ? MAX_REDUCTION_DB
+          : clamp(-10 * Math.log10(residual), -MAX_REDUCTION_DB, MAX_REDUCTION_DB),
+      };
+    }
+
+    return { params, setNoiseType, advance, sample, stats, components: () => comps };
+  }
+
+  return { createModel, createBuffers, NOISE_TYPES, toDb, MAX_HZ, MAX_REDUCTION_DB };
+}));
+  </script>
+  <script>
+/*
+ * Antiphase · renderer + controls
+ * All signal maths lives in model.js; this file draws it and wires up the UI.
+ *
+ * One big canvas shows whichever of four tabs is selected:
+ *   music · noise · anti-noise · total (everything overlapped)
+ */
+(() => {
+  'use strict';
+
+  const M = window.AntiphaseModel;
+  if (!M) { console.error('model.js failed to load'); return; }
+
+  const $  = (sel, root = document) => root.querySelector(sel);
+  const $$ = (sel, root = document) => Array.from(root.querySelectorAll(sel));
+  const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v));
+  const lerp = (a, b, t) => a + (b - a) * t;
+  const TAU = Math.PI * 2;
+  const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  /* ───────────────────────── constants ───────────────────────── */
+  const WINDOW_SEC = 0.020;    // 20 ms of sound on screen
+  const Y_RANGE = 2;           // the plot spans ±2 units
+  const PLOT_FILL = 0.86;      // share of the half-height used by ±Y_RANGE
+  const BASE_SPEED = 0.012;    // signal-seconds per real second at 1× (slow motion)
+
+  const css = getComputedStyle(document.documentElement);
+  const token = name => css.getPropertyValue(name).trim();
+  const COLOR = {
+    tone: token('--tone'), noise: token('--noise'), anti: token('--anti'),
+    clean: token('--clean'),
+  };
+  const MONO = token('--mono') || 'monospace';
+
+  /* ───────────────────────── model + state ───────────────────────── */
+  const NT = M.NOISE_TYPES;
+  const DEFAULTS = {
+    pitch: 440, volume: 0.6,
+    noisePitch: NT.engine.baseHz, noiseLevel: 0.6,
+    phase: 180, gain: 1, latency: 0, speed: 1,
+  };
+  const model = M.createModel(Object.assign({ noiseType: 'engine' }, DEFAULTS));
+  const P = model.params;                 // single source of truth for every slider
+
+  let tab = 'music';
+  let playing = !reduceMotion;
+  let cancelTarget = 1;                   // P.cancel eases toward this
+  let dirty = true;                       // something needs redrawing
+  let statsDirty = true;                  // numbers need refreshing
+  let tween = null;
+  let miniT = 0;
+  let viewAlpha = 1;                      // fades the wave in after a tab change
+  const layers = { tone: true, noise: true, anti: true };   // legend toggles on the Total tab
+
+  function markDirty(stats = true) { dirty = true; if (stats) statsDirty = true; }
+
+  const els = {
+    topbar: $('#topbar'),
+    play: $('#btn-play'), playLabel: $('#btn-play-label'), reset: $('#btn-reset'),
+    card: $('#card'), tabs: $$('.tab'), tablist: $('#tablist'), panel: $('#tabpanel'),
+    title: $('#v-title'), desc: $('#v-desc'), tabInfo: $('#btn-tab-info'),
+    sw: $('#sw-cancel'), swState: $('#sw-cancel-state'),
+    canvas: $('#cv-main'), readouts: $('#readouts'), sr: $('#sr-status'),
+  };
+
+  /* ───────────────────────── sliders ───────────────────────── */
+  const NOTES = ['C', 'C♯', 'D', 'D♯', 'E', 'F', 'F♯', 'G', 'G♯', 'A', 'A♯', 'B'];
+  function noteName(hz) {
+    const n = Math.round(12 * Math.log2(hz / 440) + 69);
+    return NOTES[((n % 12) + 12) % 12] + (Math.floor(n / 12) - 1);
+  }
+  const pct = v => `${Math.round(v * 100)}%`;
+
+  // 'lin' sliders use native units (value × k = state); 'log' sliders run 0–1000.
+  const CONTROLS = {
+    pitch:      { kind: 'log', lo: 80, hi: 1600, fmt: v => `${Math.round(v)} Hz · ${noteName(v)}` },
+    volume:     { kind: 'lin', lo: 0, hi: 100, step: 1, k: 0.01, fmt: pct },
+    noisePitch: { kind: 'log', lo: 40, hi: 1000, fmt: v => `${Math.round(v)} Hz` },
+    noiseLevel: { kind: 'lin', lo: 0, hi: 100, step: 1, k: 0.01, fmt: pct },
+    phase:      { kind: 'lin', lo: 0, hi: 360, step: 1, k: 1, fmt: v => `${Math.round(v)}°` },
+    gain:       { kind: 'lin', lo: 0, hi: 150, step: 1, k: 0.01, fmt: pct },
+    latency:    { kind: 'lin', lo: 0, hi: 100, step: 1, k: 0.01, fmt: v => `${v.toFixed(2)} ms` },
+  };
+
+  const toInput = (key, v) => {
+    const c = CONTROLS[key];
+    return c.kind === 'log'
+      ? Math.round(1000 * Math.log(v / c.lo) / Math.log(c.hi / c.lo))
+      : Math.round(v / c.k);
+  };
+  const fromInput = (key, raw) => {
+    const c = CONTROLS[key];
+    return c.kind === 'log' ? c.lo * Math.pow(c.hi / c.lo, raw / 1000) : raw * c.k;
+  };
+
+  function syncControl(key) {
+    const c = CONTROLS[key];
+    const raw = toInput(key, P[key]);
+    const text = c.fmt(P[key]);
+    c.input.value = raw;
+    c.out.textContent = text;
+    c.input.setAttribute('aria-valuetext', text);
+    c.input.style.setProperty('--p', `${clamp((raw - c.min) / (c.max - c.min), 0, 1) * 100}%`);
+  }
+
+  function setParam(key, val) {
+    P[key] = val;
+    if (CONTROLS[key]) syncControl(key);
+    markDirty(true);
+  }
+
+  // anything the user does by hand stops a running slider animation (a tween)
+  function userTouched() { tween = null; }
+
+  for (const [key, c] of Object.entries(CONTROLS)) {
+    c.input = $(`#ctl-${key}`);
+    c.out = $(`#out-${key}`);
+    if (c.kind === 'log') { c.min = 0; c.max = 1000; c.step = 1; } else { c.min = c.lo; c.max = c.hi; }
+    c.input.min = c.min; c.input.max = c.max; c.input.step = c.step;
+    c.input.addEventListener('input', () => {
+      userTouched();
+      // moving a canceller slider while cancelling is off would otherwise change nothing you can see
+      if (cancelTarget === 0 && (key === 'phase' || key === 'gain' || key === 'latency')) setCancel(true);
+      P[key] = fromInput(key, Number(c.input.value));
+      syncControl(key);
+      markDirty(true);
+    });
+    syncControl(key);
+  }
+  // <output> is an implicit live region; sliders already expose aria-valuetext and tweens
+  // rewrite these ~60×/s, so keep them quiet for screen readers
+  $$('output').forEach(o => o.setAttribute('aria-live', 'off'));
+
+  function selectNoiseType(type, resetPitch = true) {
+    model.setNoiseType(type);
+    const radio = $(`input[name="noiseType"][value="${type}"]`);
+    if (radio) radio.checked = true;
+    if (resetPitch) setParam('noisePitch', NT[type].baseHz);
+    markDirty(true);
+  }
+  $$('input[name="noiseType"]').forEach(r => r.addEventListener('change', () => {
+    if (r.checked) { userTouched(); selectNoiseType(r.value, true); }
+  }));
+
+  function setCancel(on) {
+    cancelTarget = on ? 1 : 0;
+    els.sw.setAttribute('aria-checked', String(on));
+    els.swState.textContent = on ? 'ON' : 'OFF';
+    markDirty(true);
+  }
+  els.sw.addEventListener('click', () => { userTouched(); setCancel(cancelTarget === 0); });
+
+  function syncSpeedUI() {
+    const v = String(P.speed);
+    $$('input[name="speed"]').forEach(r => { r.checked = r.value === v; });
+  }
+  $$('input[name="speed"]').forEach(r => r.addEventListener('change', () => {
+    if (r.checked) P.speed = Number(r.value);
+  }));
+
+  function setPlaying(on) {
+    playing = on;
+    els.play.classList.toggle('is-paused', !on);
+    els.playLabel.textContent = on ? 'Pause' : 'Play';
+    markDirty(false);
+  }
+  els.play.addEventListener('click', () => setPlaying(!playing));
+  setPlaying(playing);
+
+  /* ───────────────────────── tweens ───────────────────────── */
+  function tweenTo(to, ms) {
+    const from = {};
+    for (const k of Object.keys(to)) from[k] = P[k];
+    tween = { from, to, t0: performance.now(), ms };
+  }
+  function stepTween(now) {
+    if (!tween) return;
+    const t = clamp((now - tween.t0) / tween.ms, 0, 1);
+    const e = t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2;
+    for (const k of Object.keys(tween.to)) {
+      const a = tween.from[k], b = tween.to[k], c = CONTROLS[k];
+      setParam(k, c && c.kind === 'log' ? a * Math.pow(b / a, e) : lerp(a, b, e));
+    }
+    if (t >= 1) tween = null;
+  }
+
+  // the pop-up "try it" buttons: make sure the anti-noise is actually playing so the change shows
+  function tryAnti(to) { userTouched(); setCancel(true); tweenTo(to, 600); }
+
+  els.reset.addEventListener('click', () => {
+    tween = null;
+    closePopup(false);
+    selectNoiseType('engine', false);
+    setCancel(true);
+    const { speed, ...rest } = DEFAULTS;
+    P.speed = speed; syncSpeedUI();
+    tweenTo(rest, 500);
+    for (const k of Object.keys(layers)) layers[k] = true;
+    if (tab === 'total') buildReadouts();
+  });
+
+  /* ───────────────────────── pop-ups ───────────────────────── */
+  // Extra detail lives here, one click away, so the main screen stays simple.
+  const INFO = {
+    'tab-music': {
+      title: 'Music: the sound you want',
+      body: `<p>A pure tone: one smooth wave that repeats. It stands in for your music or a voice.</p>
+             <p><b>Pitch</b> is how fast it wiggles (more wiggles = a higher note). <b>Volume</b> is how tall it is.</p>
+             <p>Real music is thousands of these waves added together. Noise cancelling never touches this one, because the microphone only listens to the outside world.</p>`,
+    },
+    'tab-noise': {
+      title: 'Noise: the sound you don’t want',
+      body: `<p>Engines, air-con and crowds are many waves of different pitches mixed together. That’s why this wave looks lumpy and unpredictable.</p>
+             <p>Pick a <b>type of noise</b> to change its character. Low, steady sounds (engine hum) are the easiest to cancel. Busy, high-pitched ones (hiss) are the hardest.</p>`,
+    },
+    'tab-anti': {
+      title: 'Anti-noise: the noise, flipped',
+      body: `<p>The headphone microphone listens to the noise and a chip builds its mirror image: every peak becomes a valley and every valley a peak. That’s called being <b>180° out of phase</b>.</p>
+             <p>The dashed orange line is the noise being mirrored. At the default settings the violet wave is its exact upside-down twin.</p>
+             <p>Try breaking the mirror with the sliders and watch the cancelling fall apart.</p>`,
+      actions: () => [
+        { label: 'Try the wrong phase (0°)', run: () => tryAnti({ phase: 0 }) },
+        { label: 'Back to a perfect mirror', run: () => tryAnti({ phase: 180, gain: 1, latency: 0 }) },
+      ],
+    },
+    'tab-total': {
+      title: 'Total: everything overlapped',
+      body: `<p>All three waves drawn on top of each other. Watch the orange noise and the violet anti-noise: wherever one goes up, the other goes down by exactly the same amount.</p>
+             <p>Use the legend to hide waves and see what each one adds.</p>`,
+    },
+    pitch: {
+      title: 'Pitch',
+      body: `<p>How high or low a note sounds. It’s measured in hertz (Hz): wiggles per second. Middle A on a piano is 440 Hz.</p>
+             <p>You’re looking at only 20 thousandths of a second of sound, slowed down so you can watch it move. Higher pitch = more wiggles squeezed into the screen.</p>`,
+    },
+    volume: {
+      title: 'Volume',
+      body: `<p>How loud the music is is how tall its wave is. A taller wave means bigger swings in air pressure, which your ear hears as louder.</p>
+             <p>Noise cancelling doesn’t care about this setting: it never touches your music.</p>`,
+    },
+    noiseType: {
+      title: 'Types of noise',
+      body: `<p><b>Engine hum:</b> low and steady. The easy case.</p>
+             <p><b>Traffic:</b> a low rumble with extra bits on top.</p>
+             <p><b>Crowd:</b> lots of voices overlapping.</p>
+             <p><b>Air-con hiss:</b> high and busy. The hard case.</p>
+             <p>Simple, steady noises are predictable, so the chip can mirror them well. Complicated, high-pitched ones need a faster, more accurate chip.</p>`,
+    },
+    noisePitch: {
+      title: 'Noise pitch',
+      body: `<p>Slides the whole noise up or down in pitch. Low rumbles cancel well.</p>
+             <p>High hisses are tougher: their waves are so short that even a tiny delay puts the mirror in the wrong place (see <b>Chip delay</b>).</p>`,
+    },
+    noiseLevel: {
+      title: 'Noise loudness',
+      body: `<p>How strong the unwanted sound is. A louder noise has a taller orange wave.</p>
+             <p>A perfect mirror removes noise of any loudness completely. Real headphones can’t quite manage that, and do best with moderate, steady noise.</p>`,
+    },
+    phase: {
+      title: 'Anti-noise phase',
+      body: `<p>Phase is where a wave is in its up-and-down cycle. At <b>180°</b> the anti-noise is exactly half a cycle away from the noise: a perfect mirror.</p>
+             <p>At <b>0°</b> it’s an identical copy, which adds to the noise instead of cancelling it (+6 dB: twice as tall).</p>
+             <p>The closer to 180° the better. Stray too far (below about 120° or above 240°, at full loudness) and it stops helping and makes the noise louder.</p>`,
+      actions: () => [
+        { label: 'Try 0°', run: () => tryAnti({ phase: 0 }) },
+        { label: 'Set 180°', run: () => tryAnti({ phase: 180 }) },
+      ],
+    },
+    gain: {
+      title: 'Anti-noise loudness',
+      body: `<p><b>100%</b> means the anti-noise is exactly as strong as the noise. Too quiet and some noise is left over.</p>
+             <p>Too loud and you overshoot: you cancel the noise and then add a quieter, upside-down copy of it.</p>`,
+    },
+    latency: {
+      title: 'Chip delay',
+      body: `<p>A real chip needs a moment to hear the noise and build its mirror. That delay slides the mirror sideways.</p>
+             <p>Slow waves barely notice: a small slide is a tiny slice of a long wave. Fast, high-pitched waves are wrecked by it, because the same slide is a big part of a short wave. That’s why noise cancelling works best on low rumbles.</p>`,
+    },
+    speed: {
+      title: 'Speed',
+      body: `<p>The screen shows 20 thousandths of a second of real sound, slowed down thousands of times so you can watch it move.</p>
+             <p>Pick <b>½×</b> to follow the details, or pause with the Pause button.</p>`,
+    },
+    level: {
+      title: 'Level (dB)',
+      body: `<p>Decibels (dB) measure loudness. These numbers are <b>illustrative</b>, not calibrated: a full-height wave is set to 80 dB.</p>
+             <p>Every 6 dB less is half the height.</p>`,
+    },
+    mirror: {
+      title: 'Mirror match',
+      body: `<p>How closely the anti-noise copies the noise upside-down.</p>
+             <p>A <b>perfect</b> mirror needs the right phase (180°), the right loudness (100%) and no delay. Miss on any of them and some noise slips through, or even gets louder if you’re far off.</p>`,
+    },
+  };
+
+  const popEl = $('#pop');
+  const popTitle = $('#pop-title');
+  const popBody = $('#pop-body');
+  const popActions = $('#pop-actions');
+  const backdrop = $('#pop-backdrop');
+  const inertTargets = [els.topbar, $('main'), $('.footer')];
+  let openPopup = null;                   // { el, trigger, modal }
+  const isSheet = () => window.matchMedia('(max-width: 560px)').matches;
+
+  function placePopup(el, trigger) {
+    const r = trigger.getBoundingClientRect();
+    const m = 12, pw = el.offsetWidth, ph = el.offsetHeight;
+    const left = clamp(r.left + r.width / 2 - pw / 2, m, Math.max(m, innerWidth - pw - m));
+    let top = r.bottom + 10;
+    if (top + ph > innerHeight - m && r.top - ph - 10 > m) top = r.top - ph - 10;
+    top = clamp(top, m, Math.max(m, innerHeight - ph - m));
+    el.style.left = `${left}px`;
+    el.style.top = `${top}px`;
+  }
+
+  function showPopup(el, trigger, modal) {
+    const sheet = isSheet();
+    const asModal = modal || sheet;
+    el.hidden = false;
+    if (asModal) { backdrop.hidden = false; inertTargets.forEach(n => { n.inert = true; }); }
+    if (!modal && !sheet) placePopup(el, trigger);
+    openPopup = { el, trigger, modal: asModal };
+    if (trigger) trigger.setAttribute('aria-expanded', 'true');
+    el.scrollTop = 0;
+    el.focus({ preventScroll: true });
+  }
+
+  function closePopup(restoreFocus = true) {
+    const o = openPopup;
+    if (!o) return;
+    openPopup = null;
+    o.el.hidden = true;
+    backdrop.hidden = true;
+    inertTargets.forEach(n => { n.inert = false; });
+    if (o.trigger) {
+      o.trigger.setAttribute('aria-expanded', 'false');
+      if (restoreFocus && o.trigger.isConnected) o.trigger.focus({ preventScroll: true });
+    }
+  }
+
+  function toggleInfo(key, trigger) {
+    const d = INFO[key];
+    if (!d) return;
+    if (openPopup && openPopup.trigger === trigger) { closePopup(); return; }
+    closePopup(false);
+    popTitle.textContent = d.title;
+    popBody.innerHTML = d.body;
+    popActions.replaceChildren(...(d.actions ? d.actions() : []).map(a => {
+      const b = document.createElement('button');
+      b.type = 'button'; b.className = 'btn ghost sm'; b.textContent = a.label;
+      b.addEventListener('click', () => { closePopup(); a.run(); });               // focus goes back to the "i" button first
+      return b;
+    }));
+    showPopup(popEl, trigger, false);
+  }
+
+  function toggleDialog(id, trigger) {
+    const el = document.getElementById(id);
+    if (!el) return;
+    if (openPopup && openPopup.el === el) { closePopup(); return; }
+    closePopup(false);
+    showPopup(el, trigger, true);
+  }
+
+  document.addEventListener('click', e => {
+    const t = e.target;
+    if (!(t instanceof Element)) return;
+    const info = t.closest('[data-info]');
+    if (info) { toggleInfo(info.dataset.info, info); return; }
+    const dlg = t.closest('[data-dialog]');
+    if (dlg) { toggleDialog(dlg.dataset.dialog, dlg); return; }
+    if (t.closest('.pop-close')) closePopup();
+  });
+
+  // clicking anywhere else dismisses a pop-up (capture phase, so a slider drag still starts)
+  document.addEventListener('pointerdown', e => {
+    if (!openPopup) return;
+    const t = e.target;
+    if (openPopup.el.contains(t)) return;
+    if (openPopup.trigger && openPopup.trigger.contains(t)) return;
+    closePopup(false);
+  }, true);
+
+  // keep an anchored pop-up next to its button when the page moves
+  let repositionQueued = false;
+  function queueReposition() {
+    if (!openPopup || openPopup.modal || repositionQueued) return;
+    repositionQueued = true;
+    requestAnimationFrame(() => {
+      repositionQueued = false;
+      const o = openPopup;
+      if (!o || o.modal || !o.trigger || !o.trigger.isConnected) return;
+      const r = o.trigger.getBoundingClientRect();
+      if (r.bottom < 0 || r.top > innerHeight) { closePopup(false); return; }
+      placePopup(o.el, o.trigger);
+    });
+  }
+  window.addEventListener('scroll', queueReposition, { passive: true });
+  window.addEventListener('resize', queueReposition);
+
+  // crossing the phone breakpoint switches a small pop-up between popover and bottom sheet, so just close it
+  const sheetQuery = window.matchMedia('(max-width: 560px)');
+  if (sheetQuery.addEventListener) {
+    sheetQuery.addEventListener('change', () => { if (openPopup && openPopup.el === popEl) closePopup(false); });
+  }
+
+  // Tab inside an open pop-up: dialogs and bottom sheets keep focus inside; a small anchored
+  // pop-up closes when you tab off either end and hands focus back to its "i" button.
+  function trapTab(e) {
+    if (!openPopup) return;
+    const { el, modal } = openPopup;
+    const f = $$('button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])', el)
+      .filter(x => !x.disabled && x.offsetParent !== null);
+    if (!f.length) return;
+    const a = document.activeElement, first = f[0], last = f[f.length - 1];
+    const atStart = a === first || a === el;
+    if (modal) {
+      if (e.shiftKey && atStart) { e.preventDefault(); last.focus(); }
+      else if (!e.shiftKey && a === last) { e.preventDefault(); first.focus(); }
+    } else if (e.shiftKey ? atStart : a === last) {
+      e.preventDefault();
+      closePopup();
+    }
+  }
+
+  /* ───────────────────────── tabs + readouts ───────────────────────── */
+  const TABS = {
+    music: { title: 'Music', info: 'tab-music', sw: false,
+             desc: 'The sound you want to hear: one smooth, repeating wave.',
+             label: 'Waveform of the music: one smooth, repeating wave.' },
+    noise: { title: 'Noise', info: 'tab-noise', sw: false,
+             desc: 'The sound you don’t want: lots of waves mixed together.',
+             label: 'Waveform of the noise: a lumpy mix of waves.' },
+    anti:  { title: 'Anti-noise', info: 'tab-anti', sw: true,
+             desc: 'The noise flipped upside-down. The dashed line is the noise it mirrors.',
+             label: 'Waveform of the anti-noise: the noise flipped upside-down.' },
+    total: { title: 'Total', info: 'tab-total', sw: true,
+             desc: 'All three waves overlapped. Use the legend to hide any of them.',
+             label: 'All three waves overlapped: music, noise and anti-noise.' },
+  };
+  const TAB_ORDER = ['music', 'noise', 'anti', 'total'];
+
+  const dbText = v => (v < 1 ? '≈ 0 dB' : `${Math.round(v)} dB`);
+
+  function statusFor(s) {
+    const r = s.reductionDb;
+    if (!s.hasNoise) return ['off', 'No noise to cancel'];
+    if (P.cancel < 0.02) return ['off', 'Cancelling is off'];
+    if (P.gain < 0.005) return ['off', 'Anti-noise is muted'];
+    if (r >= 30) return ['good', 'Noise cancelled ✓'];
+    if (r >= 12) return ['good', 'Mostly cancelled'];
+    if (r >= 3) return ['ok', 'Partly cancelled'];
+    if (r > -0.5) return ['ok', 'Barely any effect'];
+    return ['bad', 'Noise is getting louder!'];
+  }
+  function mirrorFor(s) {
+    const r = s.reductionDb;
+    if (!s.hasNoise) return ['off', 'No noise'];
+    if (P.cancel < 0.02) return ['off', 'Off'];
+    if (P.gain < 0.005) return ['off', 'Muted'];
+    if (r >= 30) return ['good', 'Perfect ✓'];
+    if (r >= 12) return ['good', 'Good'];
+    if (r >= 3) return ['ok', 'Rough'];
+    if (r > -0.5) return ['ok', 'Weak'];
+    return ['bad', 'Adds noise'];
+  }
+  function changeFor(s) {
+    if (!s.hasNoise) return { text: '—', state: '' };
+    const r = s.reductionDb;
+    const text = r >= M.MAX_REDUCTION_DB - 0.5 ? '−60+ dB'
+      : r >= 0.5 ? `−${Math.round(r)} dB`
+      : r <= -0.5 ? `+${Math.round(-r)} dB`
+      : '0 dB';
+    return { text, state: r >= 12 ? 'good' : r <= -0.5 ? 'bad' : '' };
+  }
+
+  // the little clickable read-outs under the wave (the Total tab shows a legend instead)
+  const READOUTS = {
+    music: [{ key: 'level', label: 'Level', info: 'level', get: s => dbText(s.toneDb) }],
+    noise: [{ key: 'level', label: 'Level', info: 'level', get: s => (s.hasNoise ? dbText(s.noiseDb) : '—') }],
+    anti: [
+      { key: 'level', label: 'Level', info: 'level', get: s => dbText(s.antiDb) },
+      { key: 'mirror', label: 'Mirror', info: 'mirror', get: s => mirrorFor(s)[1], state: s => mirrorFor(s)[0] },
+    ],
+    total: [],
+  };
+  const LEGEND = [
+    ['tone', 'Music', 'c-tone'], ['noise', 'Noise', 'c-noise'],
+    ['anti', 'Anti-noise', 'c-anti'],
+  ];
+
+  let ro = { chips: {}, pill: null };
+  function buildReadouts() {
+    const box = els.readouts;
+    box.replaceChildren();
+    ro = { chips: {}, pill: null };
+    if (tab === 'total') {
+      for (const [key, label, cls] of LEGEND) {
+        const lab = document.createElement('label'); lab.className = `chip ${cls}`;
+        const inp = document.createElement('input'); inp.type = 'checkbox'; inp.checked = layers[key];
+        inp.addEventListener('change', () => { layers[key] = inp.checked; markDirty(false); });
+        const sp = document.createElement('span'); sp.textContent = label;
+        lab.append(inp, sp);
+        box.append(lab);
+      }
+    } else {
+      for (const def of READOUTS[tab]) {
+        const b = document.createElement('button');
+        b.type = 'button'; b.className = 'ro'; b.dataset.info = def.info;
+        b.setAttribute('aria-haspopup', 'dialog'); b.setAttribute('aria-expanded', 'false');
+        b.innerHTML = '<span class="ro-label"></span><b class="ro-value">—</b><i class="ro-i" aria-hidden="true">i</i>';
+        $('.ro-label', b).textContent = def.label;
+        ro.chips[def.key] = { def, el: b, value: $('.ro-value', b) };
+        box.append(b);
+      }
+    }
+    if (tab === 'total') {
+      const pill = document.createElement('span');
+      pill.className = 'pill'; pill.dataset.state = 'off';
+      ro.pill = pill;
+      box.append(pill);
+    }
+    statsDirty = true;
+  }
+
+  function selectTab(name, { focus = false, hash = true } = {}) {
+    if (!TABS[name]) return;
+    const prev = tab;
+    closePopup(false);
+    tab = name;
+    const T = TABS[name];
+    for (const b of els.tabs) {
+      const on = b.dataset.tab === name;
+      b.setAttribute('aria-selected', String(on));
+      b.tabIndex = on ? 0 : -1;
+      if (on && focus) b.focus();
+    }
+    els.card.dataset.tab = name;
+    els.panel.setAttribute('aria-labelledby', `tab-${name}`);
+    els.title.textContent = T.title;
+    els.desc.textContent = T.desc;
+    els.tabInfo.dataset.info = T.info;
+    els.sw.hidden = !T.sw;
+    buildReadouts();
+    if (prev !== name && !reduceMotion) viewAlpha = 0.15;
+    // keep the tab in the URL hash so a view can be linked; replace() avoids adding a history entry per tab
+    if (hash && location.hash !== `#${name}`) { try { location.replace(`#${name}`); } catch (_) { /* e.g. a sandboxed frame */ } }
+    markDirty(true);
+  }
+
+  els.tabs.forEach(b => b.addEventListener('click', () => selectTab(b.dataset.tab)));
+  els.tablist.addEventListener('keydown', e => {
+    const i = TAB_ORDER.indexOf(tab);
+    let j = -1;
+    if (e.key === 'ArrowRight') j = (i + 1) % TAB_ORDER.length;
+    else if (e.key === 'ArrowLeft') j = (i - 1 + TAB_ORDER.length) % TAB_ORDER.length;
+    else if (e.key === 'Home') j = 0;
+    else if (e.key === 'End') j = TAB_ORDER.length - 1;
+    if (j < 0) return;
+    e.preventDefault();
+    selectTab(TAB_ORDER[j], { focus: true });
+  });
+  window.addEventListener('hashchange', () => {
+    const name = location.hash.slice(1);
+    if (TABS[name] && name !== tab) selectTab(name, { hash: false });
+  });
+
+  window.addEventListener('keydown', e => {
+    if (e.key === 'Escape' && openPopup) { e.preventDefault(); closePopup(); return; }
+    if (e.key === 'Tab') { trapTab(e); return; }
+    if (e.repeat || e.ctrlKey || e.metaKey || e.altKey || e.shiftKey) return;
+    if (openPopup && openPopup.modal) return;
+    const k = e.key.length === 1 ? e.key.toLowerCase() : '';
+    if (k === 'k') setPlaying(!playing);          // (Space is left alone: it scrolls the page)
+    else if (k >= '1' && k <= '4') {
+      // if focus was inside a small pop-up that this closes, land on the new tab instead of losing it
+      const inPop = !!openPopup && openPopup.el.contains(document.activeElement);
+      selectTab(TAB_ORDER[Number(k) - 1], { focus: inPop });
+    }
+  });
+
+  /* ───────────────────────── canvas plumbing ───────────────────────── */
+  class Scope {
+    constructor(canvas) {
+      this.canvas = canvas; this.ctx = canvas.getContext('2d');
+      this.w = 0; this.h = 0; this.n = 0; this.buf = null; this.hoverX = null; this.visible = true;
+      const move = e => {
+        const r = canvas.getBoundingClientRect();
+        this.hoverX = clamp(e.clientX - r.left, 0, r.width);
+        markDirty(false);
+      };
+      const leave = () => { this.hoverX = null; markDirty(false); };
+      canvas.addEventListener('pointermove', move);
+      canvas.addEventListener('pointerdown', move);
+      canvas.addEventListener('pointerleave', leave);
+      canvas.addEventListener('pointercancel', leave);
+    }
+    resize() {
+      // layout size, not getBoundingClientRect(): it ignores transforms such as a pop-up's entrance animation
+      const w = this.canvas.clientWidth, h = this.canvas.clientHeight;
+      const dpr = Math.min(window.devicePixelRatio || 1, 2.5);
+      this.w = w; this.h = h;
+      this.canvas.width = Math.max(1, Math.round(w * dpr));
+      this.canvas.height = Math.max(1, Math.round(h * dpr));
+      this.ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      // at least 512 samples: that is 8 per cycle at the 3.2 kHz cap however narrow the screen is
+      this.n = Math.max(Math.ceil(w / 2) + 1, 512);
+      this.buf = M.createBuffers(this.n);
+    }
+  }
+
+  class Mini {
+    constructor(canvas) {
+      this.canvas = canvas; this.kind = canvas.dataset.kind; this.ctx = canvas.getContext('2d');
+      this.w = 0; this.h = 0; this.visible = true;
+    }
+    resize() {
+      const w = this.canvas.clientWidth, h = this.canvas.clientHeight;   // layout size (see Scope.resize)
+      const dpr = Math.min(window.devicePixelRatio || 1, 2.5);
+      this.w = w; this.h = h;
+      this.canvas.width = Math.max(1, Math.round(w * dpr));
+      this.canvas.height = Math.max(1, Math.round(h * dpr));
+      this.ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    }
+  }
+
+  const scope = new Scope(els.canvas);
+  const minis = $$('.mini').map(c => new Mini(c));
+  const owners = new Map([scope, ...minis].map(o => [o.canvas, o]));
+
+  if ('ResizeObserver' in window) {
+    const ro2 = new ResizeObserver(entries => {
+      for (const en of entries) {
+        const o = owners.get(en.target);
+        if (!o) continue;
+        o.resize();
+        // resizing clears the bitmap: repaint in the same frame so it never flashes blank
+        if (o.visible) (o instanceof Scope ? drawScope : drawMini)(o);
+      }
+      markDirty(false);
+    });
+    owners.forEach((_, canvas) => ro2.observe(canvas));
+  } else {
+    window.addEventListener('resize', () => { owners.forEach(o => o.resize()); markDirty(false); });
+  }
+  if ('IntersectionObserver' in window) {
+    const io = new IntersectionObserver(entries => {
+      for (const en of entries) { const o = owners.get(en.target); if (o) o.visible = en.isIntersecting; }
+      markDirty(false);
+    });
+    owners.forEach((_, canvas) => io.observe(canvas));
+  }
+  owners.forEach(o => o.resize());
+  let lastDpr = window.devicePixelRatio;     // watched in frame(): moving to another display changes it without resizing the canvas box
+
+  // keep the sticky wave (phones) tucked under the top bar whatever its height
+  const setTopbarH = () => document.documentElement.style.setProperty('--topbar-h', `${els.topbar.offsetHeight}px`);
+  if ('ResizeObserver' in window) new ResizeObserver(setTopbarH).observe(els.topbar);
+  setTopbarH();
+
+  /* ───────────────────────── drawing ───────────────────────── */
+  const fmtSigned = v => `${v < 0 ? '−' : '+'}${Math.abs(v).toFixed(2)}`;
+
+  function drawGrid(ctx, w, h, labels = true) {
+    const mid = h / 2, ys = (h / 2) * PLOT_FILL / Y_RANGE;
+    ctx.save();
+    ctx.lineWidth = 1;
+    for (let i = 0; i <= 8; i++) {
+      const x = Math.round(i / 8 * w) + 0.5;
+      ctx.strokeStyle = i % 2 === 0 ? 'rgba(255,255,255,.075)' : 'rgba(255,255,255,.035)';
+      ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, h); ctx.stroke();
+    }
+    for (let a = -2; a <= 2; a++) {
+      const y = Math.round(mid - a * ys) + 0.5;
+      ctx.strokeStyle = a === 0 ? 'rgba(255,255,255,.2)' : 'rgba(255,255,255,.055)';
+      ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(w, y); ctx.stroke();
+    }
+    if (!labels) { ctx.restore(); return; }
+    ctx.fillStyle = 'rgba(147,163,184,.78)';
+    ctx.font = `10px ${MONO}`;
+    ctx.textBaseline = 'middle'; ctx.textAlign = 'left';
+    for (const a of [1, 0, -1]) ctx.fillText(a > 0 ? '+1' : a < 0 ? '−1' : '0', 6, mid - a * ys);
+    ctx.textBaseline = 'bottom';
+    for (let i = 0; i <= 4; i++) {
+      ctx.textAlign = i === 0 ? 'left' : i === 4 ? 'right' : 'center';
+      const x = i === 0 ? 30 : i === 4 ? w - 6 : i / 4 * w;
+      ctx.fillText(i === 4 ? '20 ms' : `${i * 5}`, x, h - 5);
+    }
+    ctx.restore();
+  }
+
+  function buildPath(view, valueAt) {
+    const p = new Path2D();
+    for (let i = 0; i < view.n; i++) {
+      const x = i * view.dx, y = view.mid - valueAt(i) * view.ys;
+      if (i === 0) p.moveTo(x, y); else p.lineTo(x, y);
+    }
+    return p;
+  }
+  function strokePath(ctx, path, o) {
+    ctx.save();
+    ctx.globalAlpha = (o.alpha == null ? 1 : o.alpha) * (o.fade == null ? viewAlpha : o.fade);
+    ctx.strokeStyle = o.color;
+    ctx.lineWidth = o.width || 2;
+    ctx.lineJoin = 'round'; ctx.lineCap = 'round';
+    if (o.dash) ctx.setLineDash(o.dash);
+    if (o.glow) { ctx.shadowColor = o.color; ctx.shadowBlur = o.glow; }
+    ctx.stroke(path);
+    ctx.restore();
+  }
+  function fillToAxis(ctx, path, view, color, alpha) {
+    const p = new Path2D(path);
+    p.lineTo((view.n - 1) * view.dx, view.mid);
+    p.lineTo(0, view.mid);
+    p.closePath();
+    ctx.save(); ctx.globalAlpha = alpha * viewAlpha; ctx.fillStyle = color; ctx.fill(p); ctx.restore();
+  }
+  function roundRect(ctx, x, y, w, h, r) {
+    ctx.beginPath();
+    if (ctx.roundRect) ctx.roundRect(x, y, w, h, r); else ctx.rect(x, y, w, h);
+  }
+  function drawNote(ctx, w, h, text) {
+    ctx.save();
+    ctx.font = `600 13px ${MONO}`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillStyle = 'rgba(233,239,248,.72)';
+    ctx.fillText(text, w / 2, h / 2 - 26);
+    ctx.restore();
+  }
+
+  function drawTip(ctx, s, view, i, rows) {
+    const x = i * view.dx;
+    ctx.save();
+    ctx.strokeStyle = 'rgba(255,255,255,.35)'; ctx.lineWidth = 1; ctx.setLineDash([3, 4]);
+    ctx.beginPath(); ctx.moveTo(Math.round(x) + 0.5, 0); ctx.lineTo(Math.round(x) + 0.5, s.h); ctx.stroke();
+    ctx.setLineDash([]);
+    for (const r of rows) {
+      const y = view.mid - r.v * view.ys;
+      ctx.fillStyle = r.color; ctx.strokeStyle = '#06080d'; ctx.lineWidth = 1.5;
+      ctx.beginPath(); ctx.arc(x, y, 3.8, 0, TAU); ctx.fill(); ctx.stroke();
+    }
+    ctx.font = `11px ${MONO}`;
+    const title = `${(i / (s.n - 1) * WINDOW_SEC * 1000).toFixed(1)} ms`;
+    const lw = Math.max(...rows.map(r => ctx.measureText(r.label).width));
+    const vw = ctx.measureText('+0.00').width;
+    const pad = 9, lh = 16;
+    const bw = pad * 2 + 14 + lw + 12 + vw, bh = pad * 2 + lh * (rows.length + 1) - 4;
+    let bx = x + 14; if (bx + bw > s.w - 6) bx = x - 14 - bw;
+    bx = Math.max(6, bx);
+    const by = 8;
+    ctx.fillStyle = 'rgba(8,12,19,.93)'; ctx.strokeStyle = 'rgba(255,255,255,.18)';
+    roundRect(ctx, bx, by, bw, bh, 8); ctx.fill(); ctx.stroke();
+    ctx.textBaseline = 'middle';
+    ctx.fillStyle = '#93a3b8'; ctx.textAlign = 'left';
+    ctx.fillText(title, bx + pad, by + pad + 4);
+    rows.forEach((r, k) => {
+      const y = by + pad + 4 + lh * (k + 1);
+      ctx.fillStyle = r.color; ctx.fillRect(bx + pad, y - 4, 8, 8);
+      ctx.fillStyle = '#e9eff8'; ctx.textAlign = 'left'; ctx.fillText(r.label, bx + pad + 14, y);
+      ctx.textAlign = 'right'; ctx.fillText(fmtSigned(r.v), bx + bw - pad, y);
+    });
+    ctx.restore();
+  }
+
+  function drawScope(s) {
+    if (!s.w || !s.h || !s.buf) return;
+    const { ctx, w, h, n, buf } = s;
+    ctx.clearRect(0, 0, w, h);
+    drawGrid(ctx, w, h, h >= 150);
+    model.sample(buf, n, WINDOW_SEC);
+    const { tone, noise, anti } = buf;
+    const view = { n, mid: h / 2, ys: (h / 2) * PLOT_FILL / Y_RANGE, dx: w / (n - 1) };
+    const series = [];                                      // drawn back to front; `hero` gets glow + fill
+    const add = (label, fn, color, o) => series.push(Object.assign({ label, fn, color }, o));
+
+    switch (tab) {
+      case 'music':
+        add('music', i => tone[i], COLOR.tone, { hero: true });
+        break;
+      case 'noise':
+        add('noise', i => noise[i], COLOR.noise, { hero: true });
+        break;
+      case 'anti':
+        add('noise', i => noise[i], COLOR.noise, { width: 1.6, alpha: 0.55, dash: [6, 6] });
+        add('anti-noise', i => anti[i], COLOR.anti, { hero: true });
+        break;
+      default:                                              // total
+        if (layers.tone) add('music', i => tone[i], COLOR.tone, { width: 1.6, alpha: 0.8, dash: [6, 6] });
+        if (layers.noise) add('noise', i => noise[i], COLOR.noise, { width: 1.6, alpha: 0.85 });
+        if (layers.anti) add('anti-noise', i => anti[i], COLOR.anti, { width: 2, alpha: 0.95 });
+    }
+
+    for (const q of series) {
+      const path = buildPath(view, q.fn);
+      if (q.hero) {
+        fillToAxis(ctx, path, view, q.color, 0.08);
+        strokePath(ctx, path, { color: q.color, width: 3, glow: 14 });
+      } else {
+        strokePath(ctx, path, q);
+      }
+    }
+
+    if (tab === 'anti' && P.cancel < 0.03) drawNote(ctx, w, h, 'Anti-noise is off');
+    else if (tab === 'total' && !series.length) drawNote(ctx, w, h, 'Turn a wave on in the legend below');
+
+    if (s.hoverX != null && series.length) {
+      const i = clamp(Math.round(s.hoverX / w * (n - 1)), 0, n - 1);
+      drawTip(ctx, s, view, i, series.map(q => ({ label: q.label, v: q.fn(i), color: q.color })));
+    }
+  }
+
+  // tiny looping diagrams for the "how it works" pop-up
+  function drawMini(m) {
+    const { ctx, w, h, kind } = m;
+    if (!w || !h) return;
+    ctx.clearRect(0, 0, w, h);
+    const mid = h / 2, amp = h * 0.32, sh = miniT;
+    const f = u => 0.62 * Math.sin(TAU * 2 * (u - sh)) + 0.38 * Math.sin(TAU * 5 * (u - sh) + 1.2);
+    const trace = fn => {
+      const p = new Path2D(), steps = Math.max(2, Math.floor(w / 2));
+      for (let i = 0; i <= steps; i++) {
+        const u = i / steps, x = u * w, y = mid - fn(u) * amp;
+        if (i === 0) p.moveTo(x, y); else p.lineTo(x, y);
+      }
+      return p;
+    };
+    const line = (fn, o) => strokePath(ctx, trace(fn), Object.assign({ fade: 1 }, o));
+    ctx.save();
+    ctx.strokeStyle = 'rgba(255,255,255,.16)'; ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(0, Math.round(mid) + 0.5); ctx.lineTo(w, Math.round(mid) + 0.5); ctx.stroke();
+    ctx.restore();
+    if (kind === 'listen') {
+      line(f, { color: COLOR.noise, width: 2.6, glow: 10 });
+    } else if (kind === 'flip') {
+      line(f, { color: COLOR.noise, width: 1.6, alpha: 0.5, dash: [5, 5] });
+      line(u => -f(u), { color: COLOR.anti, width: 2.6, glow: 10 });
+    } else {
+      line(f, { color: COLOR.noise, width: 1.4, alpha: 0.35 });
+      line(u => -f(u), { color: COLOR.anti, width: 1.4, alpha: 0.35 });
+      line(() => 0, { color: COLOR.clean, width: 3, glow: 14 });
+    }
+  }
+
+  /* ───────────────────────── numbers ───────────────────────── */
+  // One polite announcement per burst: only the latest status is spoken.
+  let lastStatus = '', srTimer = 0;
+  function announce(text) {
+    clearTimeout(srTimer);
+    srTimer = setTimeout(() => { els.sr.textContent = text; }, 800);
+  }
+
+  function updateStats() {
+    const s = model.stats();
+    const [state, text] = statusFor(s);
+    const change = changeFor(s);
+
+    for (const c of Object.values(ro.chips)) {
+      c.value.textContent = c.def.get(s);
+      if (c.def.state) c.el.dataset.state = c.def.state(s);
+    }
+    if (ro.pill) { ro.pill.dataset.state = state; ro.pill.textContent = text; }
+    els.card.classList.toggle('is-clean', tab === 'total' && state === 'good' && s.reductionDb >= 30);
+
+    if (text !== lastStatus) {
+      lastStatus = text;
+      // only speak the status on the tabs that show it
+      if (tab === 'anti' || tab === 'total') announce(`${text}. Noise change ${change.text}.`);
+    }
+    const base = TABS[tab].label;
+    els.canvas.setAttribute('aria-label',
+      tab === 'total' ? `${base} ${text}. Noise change ${change.text}.` : base);
+  }
+
+  /* ───────────────────────── main loop ───────────────────────── */
+  let last = performance.now(), statsClock = 0;
+  function frame(now) {
+    const rawDt = (now - last) / 1000;
+    const dt = Math.min(0.05, rawDt);        // animation steps are clamped; the stats timer uses real time
+    last = now;
+
+    if (window.devicePixelRatio !== lastDpr) {
+      lastDpr = window.devicePixelRatio;
+      owners.forEach(o => o.resize());
+      markDirty(false);
+    }
+
+    stepTween(now);
+
+    if (P.cancel !== cancelTarget) {
+      P.cancel += (cancelTarget - P.cancel) * (1 - Math.exp(-dt * 7));
+      if (Math.abs(P.cancel - cancelTarget) < 0.002) P.cancel = cancelTarget;
+      markDirty(true);
+    }
+    if (viewAlpha < 1) { viewAlpha = Math.min(1, viewAlpha + dt / 0.28); dirty = true; }
+    if (playing) {
+      model.advance(dt * BASE_SPEED * P.speed);
+      miniT = (miniT + dt * 0.12 * P.speed) % 1;
+      dirty = true;
+    }
+    if (dirty) {
+      if (scope.visible) drawScope(scope);
+      for (const m of minis) if (m.visible) drawMini(m);
+      dirty = false;
+    }
+    statsClock += rawDt;
+    if (statsDirty && statsClock > 0.08) { updateStats(); statsDirty = false; statsClock = 0; }
+    requestAnimationFrame(frame);
+  }
+
+  /* ───────────────────────── go ───────────────────────── */
+  syncSpeedUI();
+  const startTab = location.hash.slice(1);
+  selectTab(TABS[startTab] ? startTab : 'music', { hash: false });
+  updateStats();
+  statsDirty = false;
+  requestAnimationFrame(t => { last = t; frame(t); });
+
+  // handy for debugging in the console
+  window.Antiphase = { model, params: P, selectTab };
+})();
+  </script>
+</body>
+</html>
